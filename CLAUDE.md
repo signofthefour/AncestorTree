@@ -3,7 +3,7 @@ project: AncestorTree
 path: CLAUDE.md
 type: agent-guidelines
 version: 1.0.0
-updated: 2024-02-24
+updated: 2026-02-24
 ---
 
 # CLAUDE.md
@@ -58,7 +58,7 @@ All code files MUST include header comment:
  * @file src/path/to/file.ts
  * @description Brief description
  * @version 1.0.0
- * @updated 2024-02-24
+ * @updated 2026-02-24
  */
 ```
 
