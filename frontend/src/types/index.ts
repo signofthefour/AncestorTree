@@ -1,0 +1,184 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Types for Gia Phả Điện Tử
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ─── Person ───────────────────────────────────────────────────────────────────
+
+export interface Person {
+  id: string;
+  handle: string;
+  display_name: string;
+  first_name?: string;
+  middle_name?: string;
+  surname?: string;
+  gender: 1 | 2; // 1=Male, 2=Female
+  generation: number;
+  chi?: number;
+  
+  // Birth
+  birth_date?: string;
+  birth_year?: number;
+  birth_place?: string;
+  
+  // Death
+  death_date?: string;
+  death_year?: number;
+  death_place?: string;
+  death_lunar?: string; // "15/7" format
+  
+  // Status
+  is_living: boolean;
+  is_patrilineal: boolean;
+  
+  // Contact
+  phone?: string;
+  email?: string;
+  zalo?: string;
+  facebook?: string;
+  address?: string;
+  hometown?: string;
+  
+  // Bio
+  occupation?: string;
+  biography?: string;
+  notes?: string;
+  avatar_url?: string;
+  
+  // Privacy: 0=public, 1=members only, 2=private
+  privacy_level: number;
+  
+  // Timestamps
+  created_at: string;
+  updated_at: string;
+}
+
+export type CreatePersonInput = Omit<Person, 'id' | 'created_at' | 'updated_at'>;
+export type UpdatePersonInput = Partial<CreatePersonInput>;
+
+// ─── Family ───────────────────────────────────────────────────────────────────
+
+export interface Family {
+  id: string;
+  handle: string;
+  father_id?: string;
+  mother_id?: string;
+  marriage_date?: string;
+  marriage_place?: string;
+  divorce_date?: string;
+  notes?: string;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FamilyWithRelations extends Family {
+  father?: Person;
+  mother?: Person;
+  children: Person[];
+}
+
+// ─── Child (Junction) ─────────────────────────────────────────────────────────
+
+export interface Child {
+  id: string;
+  family_id: string;
+  person_id: string;
+  sort_order: number;
+  created_at: string;
+}
+
+// ─── Profile (User) ───────────────────────────────────────────────────────────
+
+export type UserRole = 'admin' | 'editor' | 'viewer';
+
+export interface Profile {
+  id: string;
+  user_id: string;
+  email: string;
+  full_name?: string;
+  role: UserRole;
+  linked_person?: string;
+  avatar_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// ─── Contribution ─────────────────────────────────────────────────────────────
+
+export type ContributionStatus = 'pending' | 'approved' | 'rejected';
+export type ChangeType = 'create' | 'update' | 'delete';
+
+export interface Contribution {
+  id: string;
+  author_id: string;
+  target_person: string;
+  change_type: ChangeType;
+  changes: Record<string, unknown>;
+  reason?: string;
+  status: ContributionStatus;
+  reviewed_by?: string;
+  reviewed_at?: string;
+  review_notes?: string;
+  created_at: string;
+}
+
+// ─── Event (Memorial) ─────────────────────────────────────────────────────────
+
+export type EventType = 'gio' | 'hop_ho' | 'le_tet' | 'other';
+
+export interface Event {
+  id: string;
+  title: string;
+  description?: string;
+  event_date?: string;
+  event_lunar?: string;
+  event_type: EventType;
+  person_id?: string;
+  location?: string;
+  recurring: boolean;
+  created_at: string;
+}
+
+// ─── Tree Layout ──────────────────────────────────────────────────────────────
+
+export interface TreeNode {
+  person: Person;
+  x: number;
+  y: number;
+  generation: number;
+}
+
+export interface TreeConnection {
+  id: string;
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  type: 'parent-child' | 'couple';
+}
+
+export interface TreeLayout {
+  nodes: TreeNode[];
+  connections: TreeConnection[];
+  width: number;
+  height: number;
+  generations: number;
+}
+
+// ─── Lunar Calendar ───────────────────────────────────────────────────────────
+
+export interface LunarDate {
+  day: number;
+  month: number;
+  year: number;
+  leap: boolean;
+}
+
+// ─── Zodiac ───────────────────────────────────────────────────────────────────
+
+export const CAN = ['Canh', 'Tân', 'Nhâm', 'Quý', 'Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ'] as const;
+export const CHI = ['Thân', 'Dậu', 'Tuất', 'Hợi', 'Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi'] as const;
+
+export function getZodiacYear(year: number): string {
+  return `${CAN[year % 10]} ${CHI[year % 12]}`;
+}

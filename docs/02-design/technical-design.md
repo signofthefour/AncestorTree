@@ -1,0 +1,865 @@
+# Technical Design Document (TDD)
+
+**Project:** Gia Phả Điện Tử - Chi tộc Đặng Đình
+**Version:** 1.0.0
+**Date:** 2026-02-24
+**Stage:** 02-DESIGN
+**Author:** @dev-team
+
+---
+
+## 1. Document Control
+
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | 2026-02-24 | @dev-team | Initial draft |
+
+---
+
+## 2. Architecture Overview
+
+### 2.1 High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              CLIENTS                                     │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                │
+│   │   Desktop   │    │   Mobile    │    │   Tablet    │                │
+│   │   Browser   │    │   Browser   │    │   Browser   │                │
+│   └──────┬──────┘    └──────┬──────┘    └──────┬──────┘                │
+│          │                  │                  │                        │
+│          └──────────────────┼──────────────────┘                        │
+│                             │                                           │
+│                             ▼                                           │
+│   ┌─────────────────────────────────────────────────────────────────┐  │
+│   │                     NEXT.JS APPLICATION                          │  │
+│   │  ┌───────────────────────────────────────────────────────────┐  │  │
+│   │  │                    React Components                        │  │  │
+│   │  │  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌─────────────────┐  │  │  │
+│   │  │  │  Tree   │ │ Profile │ │ Search  │ │  Admin Panel    │  │  │  │
+│   │  │  │  View   │ │  Page   │ │  Page   │ │                 │  │  │  │
+│   │  │  └─────────┘ └─────────┘ └─────────┘ └─────────────────┘  │  │  │
+│   │  └───────────────────────────────────────────────────────────┘  │  │
+│   │                                                                  │  │
+│   │  ┌───────────────────────────────────────────────────────────┐  │  │
+│   │  │                    State Management                        │  │  │
+│   │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐   │  │  │
+│   │  │  │   Zustand   │  │ React Query │  │  Auth Context   │   │  │  │
+│   │  │  │   Stores    │  │   Cache     │  │                 │   │  │  │
+│   │  │  └─────────────┘  └─────────────┘  └─────────────────┘   │  │  │
+│   │  └───────────────────────────────────────────────────────────┘  │  │
+│   └─────────────────────────────────────────────────────────────────┘  │
+│                             │                                           │
+└─────────────────────────────┼───────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            SUPABASE                                      │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                │
+│   │    Auth     │    │  Database   │    │   Storage   │                │
+│   │  (GoTrue)   │    │ (PostgreSQL)│    │   (S3-like) │                │
+│   └─────────────┘    └─────────────┘    └─────────────┘                │
+│                                                                         │
+│   ┌─────────────┐    ┌─────────────┐                                   │
+│   │  Realtime   │    │  Edge Func  │                                   │
+│   │ (WebSocket) │    │  (Deno)     │                                   │
+│   └─────────────┘    └─────────────┘                                   │
+│                                                                         │
+└─────────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                            VERCEL                                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐                │
+│   │    Edge     │    │   Build     │    │   CDN       │                │
+│   │   Network   │    │   System    │    │   Cache     │                │
+│   └─────────────┘    └─────────────┘    └─────────────┘                │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2.2 Architecture Decisions
+
+| Decision | Choice | Rationale |
+|----------|--------|-----------|
+| **Frontend Framework** | Next.js 15 | SSR, App Router, performance |
+| **Language** | TypeScript | Type safety, maintainability |
+| **Styling** | Tailwind CSS 4 | Utility-first, responsive |
+| **UI Components** | shadcn/ui | Accessible, customizable |
+| **State Management** | Zustand + React Query | Simple, powerful |
+| **Backend** | Supabase | Auth, DB, Storage in one |
+| **Database** | PostgreSQL | Relational, ACID, powerful |
+| **Hosting** | Vercel | Free, auto-deploy, edge |
+
+---
+
+## 3. Database Design
+
+### 3.1 Entity Relationship Diagram (ERD)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                           DATABASE SCHEMA                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│                 people                    │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│    │ handle          VARCHAR(50) UNIQUE │
+│    │ display_name    VARCHAR(255)       │
+│    │ first_name      VARCHAR(100)       │
+│    │ middle_name     VARCHAR(100)       │
+│    │ surname         VARCHAR(100)       │
+│    │ gender          SMALLINT (1=M,2=F) │
+│    │ generation      INTEGER            │
+│    │ chi             INTEGER            │
+│    │ birth_date      DATE               │
+│    │ birth_year      INTEGER            │
+│    │ birth_place     VARCHAR(255)       │
+│    │ death_date      DATE               │
+│    │ death_year      INTEGER            │
+│    │ death_place     VARCHAR(255)       │
+│    │ death_lunar     VARCHAR(20)        │◄── Ngày giỗ âm lịch
+│    │ is_living       BOOLEAN            │
+│    │ is_patrilineal  BOOLEAN            │◄── Chính tộc
+│    │ phone           VARCHAR(20)        │
+│    │ email           VARCHAR(255)       │
+│    │ zalo            VARCHAR(50)        │
+│    │ facebook        VARCHAR(255)       │
+│    │ address         TEXT               │
+│    │ hometown        VARCHAR(255)       │
+│    │ occupation      VARCHAR(255)       │
+│    │ biography       TEXT               │
+│    │ notes           TEXT               │
+│    │ avatar_url      TEXT               │
+│    │ privacy_level   SMALLINT           │
+│    │ created_at      TIMESTAMPTZ        │
+│    │ updated_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+         │
+         │ 1:N
+         ▼
+┌──────────────────────────────────────────┐
+│               families                    │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│    │ handle          VARCHAR(50) UNIQUE │
+│ FK │ father_id       UUID → people      │
+│ FK │ mother_id       UUID → people      │
+│    │ marriage_date   DATE               │
+│    │ marriage_place  VARCHAR(255)       │
+│    │ divorce_date    DATE               │
+│    │ notes           TEXT               │
+│    │ sort_order      INTEGER            │
+│    │ created_at      TIMESTAMPTZ        │
+│    │ updated_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+         │
+         │ 1:N
+         ▼
+┌──────────────────────────────────────────┐
+│              children                     │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│ FK │ family_id       UUID → families    │
+│ FK │ person_id       UUID → people      │
+│    │ sort_order      INTEGER            │◄── Thứ tự con
+│    │ created_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│               profiles                    │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│ FK │ user_id         UUID → auth.users  │
+│    │ email           VARCHAR(255)       │
+│    │ full_name       VARCHAR(255)       │
+│    │ role            VARCHAR(20)        │◄── 'admin' | 'editor' | 'viewer'
+│ FK │ linked_person   UUID → people      │◄── Link to family member
+│    │ avatar_url      TEXT               │
+│    │ created_at      TIMESTAMPTZ        │
+│    │ updated_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│            contributions                  │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│ FK │ author_id       UUID → profiles    │
+│ FK │ target_person   UUID → people      │
+│    │ change_type     VARCHAR(20)        │◄── 'create'|'update'|'delete'
+│    │ changes         JSONB              │◄── Diff of changes
+│    │ reason          TEXT               │
+│    │ status          VARCHAR(20)        │◄── 'pending'|'approved'|'rejected'
+│ FK │ reviewed_by     UUID → profiles    │
+│    │ reviewed_at     TIMESTAMPTZ        │
+│    │ review_notes    TEXT               │
+│    │ created_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│              media                        │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│ FK │ person_id       UUID → people      │
+│    │ type            VARCHAR(20)        │◄── 'photo'|'document'|'video'
+│    │ url             TEXT               │
+│    │ caption         TEXT               │
+│    │ is_primary      BOOLEAN            │
+│    │ sort_order      INTEGER            │
+│    │ created_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+
+┌──────────────────────────────────────────┐
+│              events                       │
+├──────────────────────────────────────────┤
+│ PK │ id              UUID               │
+│    │ title           VARCHAR(255)       │
+│    │ description     TEXT               │
+│    │ event_date      DATE               │
+│    │ event_lunar     VARCHAR(20)        │◄── Ngày âm lịch
+│    │ event_type      VARCHAR(50)        │◄── 'gio'|'hop_ho'|'le_tet'
+│ FK │ person_id       UUID → people      │◄── For giỗ
+│    │ location        VARCHAR(255)       │
+│    │ recurring       BOOLEAN            │◄── Yearly recurring
+│    │ created_at      TIMESTAMPTZ        │
+└──────────────────────────────────────────┘
+```
+
+### 3.2 Table Details
+
+#### 3.2.1 `people` Table
+
+```sql
+CREATE TABLE people (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    handle          VARCHAR(50) UNIQUE NOT NULL,
+    display_name    VARCHAR(255) NOT NULL,
+    first_name      VARCHAR(100),
+    middle_name     VARCHAR(100),
+    surname         VARCHAR(100),
+    gender          SMALLINT CHECK (gender IN (1, 2)), -- 1=Male, 2=Female
+    generation      INTEGER NOT NULL DEFAULT 1,
+    chi             INTEGER, -- Chi/nhánh number
+    
+    -- Birth
+    birth_date      DATE,
+    birth_year      INTEGER,
+    birth_place     VARCHAR(255),
+    
+    -- Death
+    death_date      DATE,
+    death_year      INTEGER,
+    death_place     VARCHAR(255),
+    death_lunar     VARCHAR(20), -- Lunar date string: "15/7" (15 tháng 7 âm)
+    
+    -- Status
+    is_living       BOOLEAN DEFAULT true,
+    is_patrilineal  BOOLEAN DEFAULT true, -- Chính tộc
+    
+    -- Contact
+    phone           VARCHAR(20),
+    email           VARCHAR(255),
+    zalo            VARCHAR(50),
+    facebook        VARCHAR(255),
+    address         TEXT,
+    hometown        VARCHAR(255),
+    
+    -- Bio
+    occupation      VARCHAR(255),
+    biography       TEXT,
+    notes           TEXT,
+    avatar_url      TEXT,
+    
+    -- Privacy: 0=public, 1=members only, 2=private
+    privacy_level   SMALLINT DEFAULT 0,
+    
+    -- Timestamps
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_people_surname ON people(surname);
+CREATE INDEX idx_people_generation ON people(generation);
+CREATE INDEX idx_people_chi ON people(chi);
+CREATE INDEX idx_people_display_name ON people USING GIN(to_tsvector('simple', display_name));
+```
+
+#### 3.2.2 `families` Table
+
+```sql
+CREATE TABLE families (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    handle          VARCHAR(50) UNIQUE NOT NULL,
+    father_id       UUID REFERENCES people(id) ON DELETE SET NULL,
+    mother_id       UUID REFERENCES people(id) ON DELETE SET NULL,
+    marriage_date   DATE,
+    marriage_place  VARCHAR(255),
+    divorce_date    DATE,
+    notes           TEXT,
+    sort_order      INTEGER DEFAULT 0,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Indexes
+CREATE INDEX idx_families_father ON families(father_id);
+CREATE INDEX idx_families_mother ON families(mother_id);
+```
+
+#### 3.2.3 `children` Table (Junction)
+
+```sql
+CREATE TABLE children (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    family_id       UUID NOT NULL REFERENCES families(id) ON DELETE CASCADE,
+    person_id       UUID NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+    sort_order      INTEGER DEFAULT 0, -- Birth order
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    
+    UNIQUE(family_id, person_id)
+);
+
+-- Indexes
+CREATE INDEX idx_children_family ON children(family_id);
+CREATE INDEX idx_children_person ON children(person_id);
+```
+
+### 3.3 Row Level Security (RLS)
+
+```sql
+-- Enable RLS
+ALTER TABLE people ENABLE ROW LEVEL SECURITY;
+ALTER TABLE families ENABLE ROW LEVEL SECURITY;
+ALTER TABLE children ENABLE ROW LEVEL SECURITY;
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+-- Policies for people
+CREATE POLICY "Public read for people" ON people
+    FOR SELECT USING (privacy_level = 0);
+
+CREATE POLICY "Members read all" ON people
+    FOR SELECT USING (
+        EXISTS (
+            SELECT 1 FROM profiles 
+            WHERE profiles.user_id = auth.uid()
+        )
+    );
+
+CREATE POLICY "Admin full access" ON people
+    FOR ALL USING (
+        EXISTS (
+            SELECT 1 FROM profiles 
+            WHERE profiles.user_id = auth.uid() 
+            AND profiles.role = 'admin'
+        )
+    );
+
+-- Similar policies for other tables...
+```
+
+---
+
+## 4. API Design
+
+### 4.1 Data Layer (`lib/supabase-data.ts`)
+
+```typescript
+// Types
+export interface Person {
+  id: string;
+  handle: string;
+  displayName: string;
+  firstName?: string;
+  middleName?: string;
+  surname?: string;
+  gender: 1 | 2;
+  generation: number;
+  chi?: number;
+  birthDate?: string;
+  birthYear?: number;
+  deathDate?: string;
+  deathYear?: number;
+  deathLunar?: string; // "15/7" format
+  isLiving: boolean;
+  isPatrilineal: boolean;
+  // ... contact, bio fields
+}
+
+export interface Family {
+  id: string;
+  handle: string;
+  fatherId?: string;
+  motherId?: string;
+  children: string[]; // person IDs
+}
+
+// CRUD Operations
+export async function getPeople(): Promise<Person[]>
+export async function getPerson(id: string): Promise<Person | null>
+export async function createPerson(data: CreatePersonInput): Promise<Person>
+export async function updatePerson(id: string, data: UpdatePersonInput): Promise<Person>
+export async function deletePerson(id: string): Promise<void>
+
+export async function getFamilies(): Promise<Family[]>
+export async function getFamily(id: string): Promise<Family | null>
+export async function createFamily(data: CreateFamilyInput): Promise<Family>
+export async function updateFamily(id: string, data: UpdateFamilyInput): Promise<Family>
+
+// Specialized queries
+export async function getAncestors(personId: string): Promise<Person[]>
+export async function getDescendants(personId: string): Promise<Person[]>
+export async function searchPeople(query: string): Promise<Person[]>
+export async function getPeopleByGeneration(gen: number): Promise<Person[]>
+export async function getMemorialDates(): Promise<Event[]>
+```
+
+### 4.2 React Query Hooks
+
+```typescript
+// hooks/usePeople.ts
+export function usePeople() {
+  return useQuery({
+    queryKey: ['people'],
+    queryFn: getPeople,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+}
+
+export function usePerson(id: string) {
+  return useQuery({
+    queryKey: ['people', id],
+    queryFn: () => getPerson(id),
+    enabled: !!id,
+  });
+}
+
+export function useCreatePerson() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createPerson,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['people'] });
+    },
+  });
+}
+
+// hooks/useTree.ts
+export function useTreeData() {
+  const { data: people } = usePeople();
+  const { data: families } = useFamilies();
+  
+  return useMemo(() => {
+    if (!people || !families) return null;
+    return computeLayout(people, families);
+  }, [people, families]);
+}
+```
+
+---
+
+## 5. Component Architecture
+
+### 5.1 Directory Structure
+
+```
+src/
+├── app/                          # Next.js App Router
+│   ├── (auth)/                   # Auth pages (no layout)
+│   │   ├── login/page.tsx
+│   │   ├── register/page.tsx
+│   │   └── forgot-password/page.tsx
+│   ├── (main)/                   # Main app (with sidebar)
+│   │   ├── layout.tsx            # Sidebar + Header
+│   │   ├── page.tsx              # Dashboard/Home
+│   │   ├── tree/page.tsx         # Family tree
+│   │   ├── people/
+│   │   │   ├── page.tsx          # People list
+│   │   │   └── [id]/page.tsx     # Person detail
+│   │   ├── directory/page.tsx    # Contact directory
+│   │   ├── events/page.tsx       # Memorial calendar
+│   │   ├── book/page.tsx         # Genealogy book
+│   │   └── admin/
+│   │       ├── page.tsx          # Admin dashboard
+│   │       ├── users/page.tsx    # User management
+│   │       └── settings/page.tsx # Settings
+│   ├── api/                      # API routes (if needed)
+│   ├── layout.tsx                # Root layout
+│   └── globals.css               # Global styles
+│
+├── components/
+│   ├── ui/                       # shadcn/ui components
+│   │   ├── button.tsx
+│   │   ├── card.tsx
+│   │   ├── dialog.tsx
+│   │   └── ...
+│   ├── layout/
+│   │   ├── sidebar.tsx
+│   │   ├── header.tsx
+│   │   └── mobile-nav.tsx
+│   ├── tree/
+│   │   ├── tree-view.tsx         # Main tree component
+│   │   ├── tree-node.tsx         # Individual node
+│   │   ├── tree-connection.tsx   # Lines between nodes
+│   │   ├── tree-controls.tsx     # Zoom, filter controls
+│   │   └── tree-minimap.tsx      # Overview minimap
+│   ├── people/
+│   │   ├── person-card.tsx
+│   │   ├── person-form.tsx
+│   │   └── person-detail.tsx
+│   ├── auth/
+│   │   ├── auth-provider.tsx
+│   │   ├── login-form.tsx
+│   │   └── protected-route.tsx
+│   └── shared/
+│       ├── search-input.tsx
+│       ├── loading.tsx
+│       └── error-boundary.tsx
+│
+├── lib/
+│   ├── supabase.ts               # Supabase client
+│   ├── supabase-data.ts          # Data operations
+│   ├── tree-layout.ts            # Tree positioning algorithm
+│   ├── lunar-calendar.ts         # Âm lịch conversion
+│   ├── gedcom.ts                 # GEDCOM export/import
+│   └── utils.ts                  # Helpers
+│
+├── hooks/
+│   ├── usePeople.ts
+│   ├── useFamilies.ts
+│   ├── useTree.ts
+│   ├── useAuth.ts
+│   └── useSearch.ts
+│
+├── stores/
+│   ├── tree-store.ts             # Tree UI state (zoom, selected)
+│   └── settings-store.ts         # App settings
+│
+└── types/
+    ├── person.ts
+    ├── family.ts
+    └── index.ts
+```
+
+### 5.2 Key Components
+
+#### Tree View Component
+
+```typescript
+// components/tree/tree-view.tsx
+interface TreeViewProps {
+  people: Person[];
+  families: Family[];
+  selectedId?: string;
+  onSelect: (id: string) => void;
+  viewMode: 'all' | 'ancestors' | 'descendants';
+}
+
+export function TreeView({ 
+  people, 
+  families, 
+  selectedId, 
+  onSelect,
+  viewMode 
+}: TreeViewProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 });
+  
+  const layout = useMemo(() => {
+    const filtered = filterByViewMode(people, families, selectedId, viewMode);
+    return computeLayout(filtered.people, filtered.families);
+  }, [people, families, selectedId, viewMode]);
+  
+  // Pan & zoom handlers
+  // ...
+  
+  return (
+    <div ref={containerRef} className="relative w-full h-full overflow-hidden">
+      <TreeControls 
+        onZoomIn={() => ...} 
+        onZoomOut={() => ...}
+        onReset={() => ...}
+      />
+      <svg 
+        className="w-full h-full"
+        style={{ transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})` }}
+      >
+        {/* Connections */}
+        {layout.connections.map(conn => (
+          <TreeConnection key={conn.id} {...conn} />
+        ))}
+        
+        {/* Nodes */}
+        {layout.nodes.map(node => (
+          <TreeNode 
+            key={node.id}
+            node={node}
+            isSelected={node.id === selectedId}
+            onClick={() => onSelect(node.id)}
+          />
+        ))}
+      </svg>
+    </div>
+  );
+}
+```
+
+---
+
+## 6. Tree Layout Algorithm
+
+### 6.1 Algorithm Overview
+
+Based on market research (Topola, dTree patterns):
+
+```typescript
+// lib/tree-layout.ts
+
+export interface LayoutConfig {
+  cardWidth: number;    // 180px
+  cardHeight: number;   // 80px
+  hSpacing: number;     // 24px horizontal gap
+  vSpacing: number;     // 80px vertical gap
+  coupleGap: number;    // 8px between spouses
+}
+
+export interface PositionedNode {
+  person: Person;
+  x: number;
+  y: number;
+  generation: number;
+}
+
+export interface Connection {
+  fromX: number;
+  fromY: number;
+  toX: number;
+  toY: number;
+  type: 'parent-child' | 'couple';
+}
+
+export function computeLayout(
+  people: Person[],
+  families: Family[],
+  config?: Partial<LayoutConfig>
+): LayoutResult {
+  // 1. Build adjacency maps
+  // 2. Find root families (no parents)
+  // 3. Build subtrees recursively (bottom-up width calculation)
+  // 4. Assign positions (top-down)
+  // 5. Generate orthogonal connections
+  // 6. Return positioned nodes + connections
+}
+```
+
+### 6.2 Layout Rules
+
+1. **Single child** → directly below parent (same X)
+2. **Multiple children** → evenly distributed, parent centered
+3. **Spouse** → right of patrilineal person with gap
+4. **Connections** → strictly orthogonal (no diagonals)
+
+---
+
+## 7. Vietnamese Features Implementation
+
+### 7.1 Lunar Calendar (`lib/lunar-calendar.ts`)
+
+```typescript
+// Using existing Vietnamese lunar calendar library
+import { solarToLunar, lunarToSolar } from 'vietnamese-lunar-calendar';
+
+export interface LunarDate {
+  day: number;
+  month: number;
+  year: number;
+  leap: boolean; // Tháng nhuận
+  canChi: string; // "Giáp Tý", "Ất Sửu", etc.
+}
+
+export function formatLunarDate(lunar: LunarDate): string {
+  const leap = lunar.leap ? ' (nhuận)' : '';
+  return `${lunar.day}/${lunar.month}${leap}`;
+}
+
+export function getZodiacYear(year: number): string {
+  const CAN = ['Canh', 'Tân', 'Nhâm', 'Quý', 'Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ'];
+  const CHI = ['Thân', 'Dậu', 'Tuất', 'Hợi', 'Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi'];
+  return `${CAN[year % 10]} ${CHI[year % 12]}`;
+}
+
+export function getUpcomingMemorials(people: Person[], daysAhead: number = 30): MemorialEvent[] {
+  // Calculate upcoming giỗ dates based on lunar calendar
+}
+```
+
+### 7.2 Generation & Chi Tracking
+
+```typescript
+// Auto-calculate generation from parents
+export function calculateGeneration(person: Person, families: Family[]): number {
+  const parentFamily = families.find(f => 
+    f.children.includes(person.id)
+  );
+  
+  if (!parentFamily) return 1; // Root generation
+  
+  const father = parentFamily.fatherId 
+    ? getPerson(parentFamily.fatherId) 
+    : null;
+    
+  return father ? father.generation + 1 : 1;
+}
+
+// Chi assignment (manual by admin)
+export interface ChiConfig {
+  chiNumber: number;
+  chiName: string;
+  founderId: string; // Person who started this chi
+}
+```
+
+---
+
+## 8. Security Design
+
+### 8.1 Authentication Flow
+
+```
+┌─────────┐    ┌─────────────┐    ┌──────────────┐
+│  User   │───▶│   Next.js   │───▶│   Supabase   │
+│         │    │  Frontend   │    │     Auth     │
+└─────────┘    └─────────────┘    └──────────────┘
+                     │                    │
+                     │    JWT Token       │
+                     │◀───────────────────│
+                     │                    │
+                     ▼                    │
+              ┌─────────────┐            │
+              │   Zustand   │            │
+              │ Auth Store  │            │
+              └─────────────┘            │
+                     │                    │
+                     │    API Calls       │
+                     │    (with JWT)      │
+                     │───────────────────▶│
+                     │                    │
+                     │    RLS enforced    │
+                     │◀───────────────────│
+```
+
+### 8.2 Role-Based Access
+
+| Role | Read Public | Read Private | Create | Update | Delete | Admin |
+|------|:-----------:|:------------:|:------:|:------:|:------:|:-----:|
+| **Guest** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Viewer** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **Editor** | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **Admin** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+---
+
+## 9. Performance Considerations
+
+### 9.1 Optimization Strategies
+
+| Area | Strategy |
+|------|----------|
+| **Tree rendering** | Virtual rendering for large trees (>500 nodes) |
+| **Data fetching** | React Query caching, stale-while-revalidate |
+| **Images** | Next.js Image optimization, lazy loading |
+| **Bundle size** | Dynamic imports, tree shaking |
+| **Database** | Indexes on frequently queried columns |
+
+### 9.2 Lighthouse Targets
+
+| Metric | Target |
+|--------|--------|
+| Performance | >90 |
+| Accessibility | >90 |
+| Best Practices | >90 |
+| SEO | >90 |
+
+---
+
+## 10. Deployment Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                         GITHUB                               │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              main branch                             │    │
+│  └────────────────────────┬────────────────────────────┘    │
+└───────────────────────────┼─────────────────────────────────┘
+                            │ push
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                         VERCEL                               │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              Auto Build & Deploy                     │    │
+│  │  ┌─────────┐  ┌─────────┐  ┌─────────────────────┐  │    │
+│  │  │ Preview │  │  Prod   │  │    Edge Network     │  │    │
+│  │  │  (PR)   │  │ (main)  │  │                     │  │    │
+│  │  └─────────┘  └─────────┘  └─────────────────────┘  │    │
+│  └─────────────────────────────────────────────────────┘    │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            │ API calls
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        SUPABASE                              │
+│  ┌─────────┐  ┌─────────┐  ┌─────────┐  ┌─────────┐        │
+│  │  Auth   │  │   DB    │  │ Storage │  │Realtime │        │
+│  └─────────┘  └─────────┘  └─────────┘  └─────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 11. Testing Strategy
+
+### 11.1 Test Pyramid
+
+```
+        ┌───────────┐
+        │    E2E    │  ← Playwright (critical paths)
+        │   Tests   │
+       ─┼───────────┼─
+       │ Integration │  ← Testing Library (component + API)
+       │    Tests    │
+      ─┼─────────────┼─
+      │    Unit      │  ← Vitest (utils, hooks, logic)
+      │    Tests     │
+     ─┴──────────────┴─
+```
+
+### 11.2 Coverage Targets
+
+| Type | Coverage | Focus |
+|------|----------|-------|
+| Unit | >80% | Tree layout, utils, hooks |
+| Integration | >60% | Components, data layer |
+| E2E | Critical paths | Auth, CRUD, tree view |
+
+---
+
+## 12. Approval
+
+| Role | Name | Date | Signature |
+|------|------|------|-----------|
+| Tech Lead | @dev-team | 2026-02-24 | ✅ Approved |
+| PM | @pm | | ⏳ Pending |
+| Sponsor | Chủ tịch HĐGT | | ⏳ Pending |
+
+---
+
+**Previous:** [01-planning/roadmap.md](../01-planning/roadmap.md)
+**Next:** [02-design/ui-design.md](./ui-design.md)
+
+*SDLC Framework 6.1.1 - Stage 02 Design*
