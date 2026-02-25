@@ -2,7 +2,7 @@
 project: AncestorTree
 path: docs/02-design/technical-design.md
 type: design
-version: 1.2.0
+version: 1.3.0
 updated: 2026-02-25
 owner: "@dev-team"
 status: approved
@@ -17,6 +17,7 @@ status: approved
 | 1.0.0   | 2026-02-24 | @dev-team | Initial draft                                     |
 | 1.1.0   | 2026-02-25 | @pm       | Add Vinh danh, Quỹ khuyến học, Hương ước         |
 | 1.2.0   | 2026-02-25 | @architect | Update to match actual implementation (S1-S6)    |
+| 1.3.0   | 2026-02-25 | @architect | Add Cầu đương tables + DFS rotation algorithm (Sprint 7) |
 
 ---
 
@@ -112,7 +113,10 @@ status: approved
 > **v1.1 tables** (achievements, fund_transactions, scholarships, clan_articles) MUST be created in a
 > separate migration file: `frontend/supabase/sprint6-migration.sql`.
 >
-> See [SPRINT-PLAN.md](../04-build/SPRINT-PLAN.md) Sprint 6 > Migration Strategy for details.
+> **v1.2 tables** (cau_duong_pools, cau_duong_assignments) are in a separate file:
+> `frontend/supabase/cau-duong-migration.sql`.
+>
+> See [SPRINT-PLAN.md](../04-build/SPRINT-PLAN.md) Sprint 6-7 > Migration Strategy for details.
 
 ### 3.1 Entity Relationship Diagram (ERD)
 
@@ -500,6 +504,129 @@ CREATE TABLE clan_articles (
 CREATE INDEX idx_clan_articles_category ON clan_articles(category);
 CREATE INDEX idx_clan_articles_sort ON clan_articles(sort_order);
 ```
+
+#### 3.2.8 `cau_duong_pools` Table (v1.2)
+
+Configuration for a ceremony rotation group. Each pool is anchored to a root ancestor and defines eligibility criteria.
+
+```sql
+CREATE TABLE cau_duong_pools (
+    id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name            VARCHAR(200) NOT NULL,    -- VD: "Nhánh ông Đặng Đình Nhân"
+    ancestor_id     UUID NOT NULL REFERENCES people(id) ON DELETE RESTRICT,
+    min_generation  INTEGER NOT NULL DEFAULT 1,  -- Đời tối thiểu (VD: 12)
+    max_age_lunar   INTEGER NOT NULL DEFAULT 70, -- Tuổi âm tối đa (mặc định: dưới 70)
+    description     TEXT,
+    is_active       BOOLEAN DEFAULT true,
+    created_at      TIMESTAMPTZ DEFAULT NOW(),
+    updated_at      TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_cau_duong_pools_ancestor ON cau_duong_pools(ancestor_id);
+```
+
+#### 3.2.9 `cau_duong_assignments` Table (v1.2)
+
+One row per ceremony per year. Tracks rotation position, delegation, and completion status.
+
+```sql
+CREATE TABLE cau_duong_assignments (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    pool_id                 UUID NOT NULL REFERENCES cau_duong_pools(id) ON DELETE CASCADE,
+    year                    INTEGER NOT NULL,
+    ceremony_type           VARCHAR(30) NOT NULL CHECK (
+                                ceremony_type IN ('tet', 'ram_thang_gieng', 'gio_to', 'ram_thang_bay')
+                            ),
+    host_person_id          UUID REFERENCES people(id) ON DELETE SET NULL,
+    actual_host_person_id   UUID REFERENCES people(id) ON DELETE SET NULL,
+    status                  VARCHAR(20) DEFAULT 'scheduled' CHECK (
+                                status IN ('scheduled', 'completed', 'delegated', 'rescheduled', 'cancelled')
+                            ),
+    scheduled_date          DATE,
+    actual_date             DATE,
+    reason                  TEXT,      -- Lý do ủy quyền / đổi ngày
+    notes                   TEXT,
+    rotation_index          INTEGER,   -- Vị trí trong DFS list khi phân công
+    created_by              UUID REFERENCES profiles(id) ON DELETE SET NULL,
+    created_at              TIMESTAMPTZ DEFAULT NOW(),
+    updated_at              TIMESTAMPTZ DEFAULT NOW(),
+
+    UNIQUE(pool_id, year, ceremony_type)
+);
+
+CREATE INDEX idx_cau_duong_assignments_pool   ON cau_duong_assignments(pool_id);
+CREATE INDEX idx_cau_duong_assignments_year   ON cau_duong_assignments(year);
+CREATE INDEX idx_cau_duong_assignments_host   ON cau_duong_assignments(host_person_id);
+CREATE INDEX idx_cau_duong_assignments_status ON cau_duong_assignments(status);
+```
+
+**Ceremony types and Vietnamese calendar dates:**
+
+| ceremony_type | Vietnamese Name | Âm lịch | Approx. Solar |
+|---------------|----------------|---------|---------------|
+| `tet` | Tết Nguyên Đán | 1/1 AL | Jan-Feb |
+| `ram_thang_gieng` | Rằm tháng Giêng | 15/1 AL | Feb |
+| `gio_to` | Giỗ tổ Can Thăng | 15/3 AL | Apr |
+| `ram_thang_bay` | Rằm tháng Bảy | 15/7 AL | Aug |
+
+**Status lifecycle:**
+
+```
+scheduled → completed   (thực hiện thành công)
+scheduled → delegated   (ủy quyền cho người khác)
+scheduled → rescheduled (đổi ngày)
+scheduled → cancelled   (hủy)
+```
+
+#### 3.2.10 Cầu đương DFS Rotation Algorithm
+
+The rotation order is determined by a Depth-First Search (DFS preorder) traversal of the family tree starting from the pool's `ancestor_id`. This mirrors the Vietnamese tradition of respecting generational seniority.
+
+```typescript
+// Pseudocode for buildDFSOrder()
+function buildDFSOrder(ancestorId, familiesByFatherId, childrenByFamilyId): string[] {
+  const result: string[] = [];
+  const stack: string[] = [ancestorId];
+
+  while (stack.length > 0) {
+    const personId = stack.pop()!;
+    result.push(personId);
+
+    // Get this person's families as father, sorted by sort_order (ascending)
+    const families = familiesByFatherId[personId] ?? [];
+
+    // Push children in reverse order so stack processes left-to-right
+    for (const family of [...families].reverse()) {
+      const children = childrenByFamilyId[family.id] ?? [];
+      for (const child of [...children].reverse()) {
+        stack.push(child.person_id);
+      }
+    }
+  }
+
+  return result; // DFS preorder: root first, then children L-to-R
+}
+
+// Eligibility filter applied after DFS order:
+function isEligible(person, pool, currentYear): boolean {
+  const ageLunar = currentYear - person.birth_year + 1; // tuổi âm
+  return (
+    person.gender === 1 &&        // nam giới
+    person.is_living &&           // còn sống
+    person.generation >= pool.min_generation &&
+    ageLunar < pool.max_age_lunar &&
+    isMarried(person.id)          // đã lập gia đình (có record trong families)
+  );
+}
+
+// Next host selection:
+function getNextHost(pool, lastAssignment, eligibleList): Person {
+  const nextIndex = (lastAssignment.rotation_index + 1) % eligibleList.length;
+  return eligibleList[nextIndex];
+}
+```
+
+**Implementation:** `frontend/src/lib/supabase-data-cau-duong.ts`
 
 ### 3.3 Row Level Security (RLS)
 

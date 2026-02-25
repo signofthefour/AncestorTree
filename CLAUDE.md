@@ -2,7 +2,7 @@
 project: AncestorTree
 path: CLAUDE.md
 type: agent-guidelines
-version: 1.3.0
+version: 1.5.0
 updated: 2026-02-25
 ---
 
@@ -15,7 +15,7 @@ This file provides guidance to AI assistants (Claude, GPT, etc.) when working wi
 **AncestorTree** (Gia Pha Dien Tu) is a digital family tree management system for Chi toc Dang Dinh, Thach Lam, Ha Tinh.
 
 - **Repository:** https://github.com/Minh-Tam-Solution/AncestorTree
-- **Current Version:** v1.3.0 (Sprint 6 complete)
+- **Current Version:** v1.5.0 (Sprint 7.5 complete)
 - **SDLC Tier:** LITE (5 stages)
 - **Tech Stack:** Next.js 16, React 19, Tailwind CSS 4, Supabase
 - **Built with:** [TinySDLC](https://github.com/Minh-Tam-Solution/tinysdlc) + [MTS-SDLC-Lite](https://github.com/Minh-Tam-Solution/MTS-SDLC-Lite)
@@ -78,9 +78,10 @@ AncestorTree/
 │   └── 05-test/                    # Testing
 ├── frontend/                       # Next.js application
 │   ├── src/app/                    # App router (route groups)
-│   │   ├── (auth)/                 # Auth pages (login, register)
+│   │   ├── (auth)/                 # Auth pages (login, register, forgot-password, reset-password)
 │   │   └── (main)/                 # Main app with sidebar
 │   │       ├── achievements/       # Vinh danh (Sprint 6)
+│   │       ├── cau-duong/          # Lich Cau duong (Sprint 7)
 │   │       ├── charter/            # Huong uoc (Sprint 6)
 │   │       ├── contributions/      # Dong gop (Sprint 4)
 │   │       ├── directory/          # Thu muc thanh vien (Sprint 4)
@@ -91,6 +92,7 @@ AncestorTree/
 │   │       ├── tree/               # Cay gia pha
 │   │       └── admin/              # Admin panel
 │   │           ├── achievements/   # QL Vinh danh (Sprint 6)
+│   │           ├── cau-duong/      # QL Cau duong (Sprint 7)
 │   │           ├── charter/        # QL Huong uoc (Sprint 6)
 │   │           ├── contributions/  # QL Dong gop (Sprint 4)
 │   │           ├── fund/           # QL Quy & Hoc bong (Sprint 6)
@@ -98,17 +100,22 @@ AncestorTree/
 │   │           └── users/          # QL Nguoi dung
 │   ├── src/components/             # React components
 │   │   ├── ui/                     # shadcn/ui components
-│   │   └── layout/                 # Layout components (sidebar, header)
+│   │   ├── layout/                 # Layout components (sidebar, header)
+│   │   ├── home/                   # Homepage components (featured-charter)
+│   │   └── people/                 # People components (person-form, family-relations-card)
 │   ├── src/hooks/                  # Custom React hooks
 │   │   ├── use-achievements.ts     # Achievement CRUD hooks (Sprint 6)
+│   │   ├── use-cau-duong.ts        # Cau duong rotation hooks (Sprint 7)
 │   │   ├── use-clan-articles.ts    # Charter CRUD hooks (Sprint 6)
 │   │   ├── use-contributions.ts    # Contribution hooks (Sprint 4)
 │   │   ├── use-events.ts           # Event hooks (Sprint 4)
+│   │   ├── use-families.ts         # Family relations hooks (Sprint 7.5)
 │   │   └── use-fund.ts             # Fund & scholarship hooks (Sprint 6)
 │   ├── src/lib/                    # Utilities, Supabase client
 │   │   ├── supabase.ts             # Supabase client init
 │   │   ├── supabase-data.ts        # Core data layer (people, families)
 │   │   ├── supabase-data-achievements.ts  # Achievement data (Sprint 6)
+│   │   ├── supabase-data-cau-duong.ts     # Cau duong + DFS algorithm (Sprint 7)
 │   │   ├── supabase-data-charter.ts       # Charter data (Sprint 6)
 │   │   ├── supabase-data-fund.ts          # Fund & scholarship data (Sprint 6)
 │   │   └── lunar-calendar.ts       # Lunar-solar conversion (Sprint 4)
@@ -116,7 +123,8 @@ AncestorTree/
 │   │   └── index.ts                # All type definitions
 │   └── supabase/                   # Database migrations
 │       ├── database-setup.sql      # Core tables (7): people, families, children, profiles, contributions, events, media
-│       └── sprint6-migration.sql   # v1.3 tables (4): achievements, fund_transactions, scholarships, clan_articles
+│       ├── sprint6-migration.sql   # v1.3 tables (4): achievements, fund_transactions, scholarships, clan_articles
+│       └── cau-duong-migration.sql # v1.4 tables (2): cau_duong_pools, cau_duong_assignments
 ├── .sdlc-config.json               # SDLC configuration
 ├── CLAUDE.md                       # AI assistant guidelines
 └── README.md                       # Project overview
@@ -124,13 +132,14 @@ AncestorTree/
 
 ## Database Schema
 
-11 tables across 3 layers:
+13 tables across 4 layers:
 
 | Layer | Tables | Migration File |
 |-------|--------|----------------|
 | **Core Genealogy** | `people`, `families`, `children` | `database-setup.sql` |
 | **Platform** | `profiles`, `contributions`, `media`, `events` | `database-setup.sql` |
 | **Culture (v1.3)** | `achievements`, `fund_transactions`, `scholarships`, `clan_articles` | `sprint6-migration.sql` |
+| **Ceremony (v1.4)** | `cau_duong_pools`, `cau_duong_assignments` | `cau-duong-migration.sql` |
 
 All tables have RLS policies with 4 roles: `admin`, `editor`, `viewer`, `guest`.
 
@@ -143,7 +152,7 @@ cd frontend
 pnpm install
 
 # Development
-pnpm dev              # Start dev server (localhost:3000)
+pnpm dev              # Start dev server (localhost:4000)
 
 # Build & Test
 pnpm build            # Production build
@@ -165,7 +174,7 @@ pnpm tsc --noEmit     # TypeScript check
 - Use functional components with hooks
 - Server Components by default, `'use client'` only when needed
 - Use route groups: `(auth)` for public, `(main)` for authenticated
-- React Query for server state, Zustand for client state
+- React Query for server state (no global client state library needed)
 - Each feature module has: data layer (`src/lib/`) + hooks (`src/hooks/`) + pages (`src/app/`)
 
 ### Styling
@@ -211,6 +220,7 @@ chore/upgrade-deps
 | UI/UX Design | `docs/02-design/ui-ux-design.md` |
 | Core DB Schema | `frontend/supabase/database-setup.sql` |
 | Sprint 6 Migration | `frontend/supabase/sprint6-migration.sql` |
+| Sprint 7 Migration | `frontend/supabase/cau-duong-migration.sql` |
 | Sprint Plan | `docs/04-build/SPRINT-PLAN.md` |
 | Test Plan | `docs/05-test/TEST-PLAN.md` |
 | Community Launch | `docs/00-foundation/06-Community/Community-Launch-Strategy.md` |

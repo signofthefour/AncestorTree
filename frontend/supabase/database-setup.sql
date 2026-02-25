@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Gia Phả Điện Tử - Database Setup
--- Chi tộc Đặng Đình - Thạch Lâm - Hà Tĩnh
+-- Họ Đặng làng Kỷ Các
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- Enable UUID extension
@@ -233,6 +233,9 @@ CREATE POLICY "Admins and editors can manage children" ON children
 
 -- Profiles policies
 CREATE POLICY "Users can read all profiles" ON profiles FOR SELECT USING (true);
+
+CREATE POLICY "Service role can insert profiles" ON profiles
+    FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Users can update own profile" ON profiles
     FOR UPDATE USING (auth.uid() = user_id);

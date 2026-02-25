@@ -24,8 +24,8 @@ export const metadata: Metadata = {
     default: 'Gia Phả Điện Tử - Chi tộc Đặng Đình',
     template: '%s | Gia Phả Đặng Đình',
   },
-  description: 'Phần mềm quản lý gia phả điện tử cho Chi tộc Đặng Đình, Thạch Lâm, Hà Tĩnh. Lưu trữ thông tin dòng họ, cây gia phả, lịch giỗ chạp.',
-  keywords: ['gia phả', 'gia phả điện tử', 'Đặng Đình', 'Thạch Lâm', 'Hà Tĩnh', 'dòng họ', 'cây gia phả', 'phả hệ'],
+  description: 'Phần mềm quản lý gia phả điện tử cho Họ Đặng làng Kỷ Các. Lưu trữ thông tin dòng họ, cây gia phả, lịch giỗ chạp.',
+  keywords: ['gia phả', 'gia phả điện tử', 'Họ Đặng', 'làng Kỷ Các', 'dòng họ', 'cây gia phả', 'phả hệ'],
   authors: [{ name: 'Chi tộc Đặng Đình' }],
   openGraph: {
     title: 'Gia Phả Điện Tử - Chi tộc Đặng Đình',

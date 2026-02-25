@@ -2,7 +2,7 @@
 project: AncestorTree
 path: docs/04-build/SPRINT-PLAN.md
 type: build
-version: 1.3.0
+version: 1.4.0
 updated: 2026-02-25
 owner: "@pm"
 status: approved
@@ -13,7 +13,7 @@ status: approved
 ## 📅 Sprint Overview
 
 ```
-Timeline: Feb 24 → Apr 4, 2026 (6 weeks)
+Timeline: Feb 24 → Apr 11, 2026 (7 weeks)
 
 Sprint 1 ████████████████████████████████ Week 1 (Feb 24-28) ✅ DONE
 Sprint 2 ████████████████████████████████ Week 2 (Mar 3-7)   ✅ DONE
@@ -21,6 +21,7 @@ Sprint 3 ███████████████████████�
 Sprint 4 ████████████████████████████████ Week 4 (Mar 17-21) ✅ DONE
 Sprint 5 ████████████████████████████████ Week 5 (Mar 24-28) ✅ DONE
 Sprint 6 ████████████████████████████████ Week 6 (Mar 31-Apr 4) ✅ DONE
+Sprint 7 ████████████████████████████████ Week 7 (Apr 7-11) 🔄 IN PROGRESS
 
 Milestones:
 ├── v0.1.0 Alpha    → End Sprint 1  ✅
@@ -28,7 +29,8 @@ Milestones:
 ├── v1.0.0 MVP      → End Sprint 3  ✅
 ├── v1.1.0 Enhanced → End Sprint 4  ✅
 ├── v1.2.0 Release  → End Sprint 5  ✅
-└── v1.3.0 Culture  → End Sprint 6  ✅
+├── v1.3.0 Culture  → End Sprint 6  ✅
+└── v1.4.0 CauDuong → End Sprint 7  🔄
 ```
 
 ---
@@ -508,8 +510,162 @@ Milestones:
 
 ---
 
-**Status:** ✅ All 6 Sprints Complete (v1.3.0)
+---
 
-*Updated: 2026-02-25 — All sprint statuses updated to reflect completed implementation.*
+## 🏃 Sprint 7: Lịch Cầu đương (5 days) 🔄
+
+**Dates:** Apr 7-11, 2026
+**Goal:** Ceremony rotation schedule — phân công xoay vòng chủ lễ Cầu đương
+**Version:** v1.4.0
+**BRD Coverage:** FR-1501~1507
+
+### Business Context
+
+Cầu đương là nghi lễ cúng tổ tiên xoay vòng trong dòng họ:
+- **4 lễ/năm:** Tết Nguyên Đán, Rằm tháng Giêng (15/1 AL), Giỗ tổ Can Thăng (15/3 AL), Rằm tháng Bảy (15/7 AL)
+- **Người đủ điều kiện:** Nam giới đã lập gia đình, dưới 70 tuổi âm, từ đời 12 trở xuống
+- **Thứ tự xoay vòng:** DFS preorder của cây gia phả từ tổ tông, đời trên trước, trong mỗi đời theo thứ tự gia đình (sort_order)
+- **Tuổi âm:** `currentYear - birthYear + 1` (cách tính tuổi Việt Nam)
+- **Chu kỳ:** Sau khi xoay hết 1 vòng sẽ bắt đầu lại từ đầu
+
+### Database Design
+
+**Tables mới:**
+
+```sql
+cau_duong_pools          -- Cấu hình nhóm xoay vòng
+├── id (UUID PK)
+├── name                 -- VD: "Nhánh ông Đặng Đình Nhân"
+├── ancestor_id          -- FK → people (tổ tông gốc của nhóm)
+├── min_generation       -- Đời tối thiểu (VD: 12)
+├── max_age_lunar        -- Tuổi âm tối đa (mặc định: 70)
+├── description
+└── is_active
+
+cau_duong_assignments    -- Phân công từng lễ
+├── id (UUID PK)
+├── pool_id              -- FK → cau_duong_pools
+├── year                 -- Năm dương lịch
+├── ceremony_type        -- ENUM: tet | ram_thang_gieng | gio_to | ram_thang_bay
+├── host_person_id       -- Người được phân công
+├── actual_host_person_id -- Người thực sự thực hiện (nếu ủy quyền)
+├── status               -- ENUM: scheduled | completed | delegated | rescheduled | cancelled
+├── scheduled_date       -- Ngày dự kiến (DATE)
+├── actual_date          -- Ngày thực hiện (DATE, nếu đổi)
+├── reason               -- Lý do ủy quyền / đổi ngày
+├── notes
+├── rotation_index       -- Vị trí trong DFS list khi phân công (để theo dõi vòng xoay)
+└── UNIQUE(pool_id, year, ceremony_type)
+```
+
+**Migration file:** `frontend/supabase/cau-duong-migration.sql`
+
+### Algorithm: DFS Preorder Traversal
+
+```
+Mục tiêu: Xác định thứ tự xoay vòng theo cây gia phả
+
+Input:
+  - ancestor_id: UUID của tổ tông nhóm Cầu đương
+  - families: {father_id → [family]} (sorted by sort_order)
+  - children: {family_id → [child]} (sorted by sort_order)
+
+Algorithm (DFS preorder):
+  1. Stack = [ancestor_id]
+  2. While stack not empty:
+     a. current = stack.pop()
+     b. Nếu current là male, married → thêm vào eligible_list
+     c. Lấy tất cả families mà father_id = current (sort by sort_order)
+     d. Với mỗi family (theo thứ tự ngược để push đúng thứ tự):
+        - Lấy children của family (sort by sort_order)
+        - Push children vào stack (thứ tự ngược)
+  3. Lọc eligible_list: gender=1, is_living, generation>=min_gen, ageLunar<max_age
+
+Rotation logic:
+  - next_rotation_index = (last_assignment.rotation_index + 1) % eligible_count
+  - eligible_list[next_rotation_index] = người được phân công tiếp theo
+```
+
+**Algorithm file:** `frontend/src/lib/supabase-data-cau-duong.ts`
+
+### Tasks
+
+| Day | Task | Hours | Owner | Status |
+|-----|------|-------|-------|--------|
+| **Day 1: Database + Types** | | | | |
+| | Tạo `cau-duong-migration.sql` (tables + RLS) | 2h | @fullstack | ✅ |
+| | Thêm types vào `src/types/index.ts` | 1h | @fullstack | ✅ |
+| | Run migration trên Supabase | 0.5h | @fullstack | ⏳ |
+| **Day 2: Data Layer + Hooks** | | | | |
+| | Tạo `src/lib/supabase-data-cau-duong.ts` | 3h | @fullstack | ✅ |
+| | Implement DFS algorithm (`buildDFSOrder`) | 1h | @fullstack | ✅ |
+| | Tạo `src/hooks/use-cau-duong.ts` | 1h | @fullstack | ✅ |
+| **Day 3: Public View** | | | | |
+| | Tạo `/cau-duong/page.tsx` — xem lịch phân công | 2h | @fullstack | ✅ |
+| | Tab 1: Lịch phân công năm (4 lễ, có status badge) | 1h | @fullstack | ✅ |
+| | Tab 2: Danh sách thành viên đủ điều kiện (DFS order) | 1h | @fullstack | ✅ |
+| | Thêm error.tsx + loading.tsx | 0.5h | @fullstack | ⏳ |
+| **Day 4: Admin Panel** | | | | |
+| | Tạo `/admin/cau-duong/page.tsx` | 3h | @fullstack | ⏳ |
+| | Form tạo/sửa pool (tổ tông, đời, tuổi) | 1h | @fullstack | ⏳ |
+| | Nút phân công tự động + manual assign | 1h | @fullstack | ⏳ |
+| | Xử lý ủy quyền (delegation form) | 1h | @fullstack | ⏳ |
+| | Xử lý đổi ngày (reschedule form) | 0.5h | @fullstack | ⏳ |
+| | Ghi nhận hoàn thành (mark complete) | 0.5h | @fullstack | ⏳ |
+| **Day 5: Navigation + Docs** | | | | |
+| | Thêm "Cầu đương" vào sidebar navigation | 0.5h | @fullstack | ⏳ |
+| | Update `docs/02-design/technical-design.md` | 1h | @pm | ⏳ |
+| | Update `CLAUDE.md` với Sprint 7 info | 0.5h | @pm | ⏳ |
+| | Verify build passes (`pnpm build`) | 1h | @fullstack | ⏳ |
+
+### Acceptance Criteria
+
+| ID | Criteria | Status |
+|----|----------|--------|
+| AC-S7-01 | Admin có thể tạo nhóm Cầu đương với cấu hình đời/tuổi | ⏳ |
+| AC-S7-02 | Hệ thống tính đúng danh sách đủ điều kiện theo tuổi âm | ⏳ |
+| AC-S7-03 | Thứ tự danh sách đúng theo DFS preorder cây gia phả | ⏳ |
+| AC-S7-04 | Admin phân công tự động chọn người tiếp theo trong vòng xoay | ⏳ |
+| AC-S7-05 | Viewer xem được lịch phân công 4 lễ/năm với status | ⏳ |
+| AC-S7-06 | Ủy quyền: ghi nhận người ủy quyền + người thực hiện + lý do | ⏳ |
+| AC-S7-07 | Đổi ngày: cập nhật actual_date, lý do, status=rescheduled | ⏳ |
+| AC-S7-08 | Vòng xoay tự động reset sau khi hết 1 chu kỳ | ⏳ |
+
+### File Structure
+
+```
+frontend/
+├── supabase/
+│   └── cau-duong-migration.sql   ✅ Created
+├── src/
+│   ├── types/
+│   │   └── index.ts              ✅ Added CauDuong types
+│   ├── lib/
+│   │   └── supabase-data-cau-duong.ts  ✅ Created
+│   ├── hooks/
+│   │   └── use-cau-duong.ts      ✅ Created
+│   └── app/(main)/
+│       ├── cau-duong/
+│       │   ├── page.tsx          ✅ Created
+│       │   ├── error.tsx         ⏳ Pending
+│       │   └── loading.tsx       ⏳ Pending
+│       └── admin/
+│           └── cau-duong/
+│               └── page.tsx      ⏳ Pending
+└── src/components/layout/
+    └── app-sidebar.tsx           ⏳ Pending (add nav item)
+```
+
+### Dependencies
+
+- Requires: Sprint 1-6 complete (DB tables `people`, `families`, `children` with `sort_order`)
+- Requires: `is_living`, `gender`, `generation`, `birth_year` fields on `people` table
+- Requires: `sort_order` on `families` and `children` tables (Sprint 3)
+
+---
+
+**Status:** ✅ Sprints 1-6 Complete (v1.3.0) | 🔄 Sprint 7 In Progress (v1.4.0)
+
+*Updated: 2026-02-25 — Added Sprint 7: Lịch Cầu đương ceremony rotation schedule.*
 
 *SDLC Framework 6.1.1 - Stage 04 Build*

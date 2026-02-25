@@ -36,9 +36,9 @@ status: approved
 
 ## 2. Target Users
 
-### 2.1 Primary User: Chi tộc Đặng Đình
+### 2.1 Primary User: Họ Đặng làng Kỷ Các
 
-Chi tộc Đặng Đình, Thạch Lâm, Hà Tĩnh — dòng họ đầu tiên sử dụng hệ thống.
+Họ Đặng làng Kỷ Các — dòng họ đầu tiên sử dụng hệ thống.
 
 ### 2.2 User Personas
 

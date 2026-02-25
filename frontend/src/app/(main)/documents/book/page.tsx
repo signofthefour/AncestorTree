@@ -181,7 +181,7 @@ export default function BookPage() {
             Gia Phả
           </h1>
           <h2 className="text-xl md:text-2xl font-semibold text-emerald-700 mb-4">
-            Chi tộc Đặng Đình - Thạch Lâm
+            Họ Đặng làng Kỷ Các
           </h2>
           <p className="text-muted-foreground italic mb-6">
             &ldquo;Gìn giữ tinh hoa - Tiếp bước cha ông&rdquo;
@@ -216,7 +216,7 @@ export default function BookPage() {
 
         {/* Footer */}
         <div className="text-center text-sm text-muted-foreground border-t pt-6">
-          <p>Gia Phả Điện Tử - Chi tộc Đặng Đình, Thạch Lâm, Hà Tĩnh</p>
+          <p>Gia Phả Điện Tử - Họ Đặng làng Kỷ Các</p>
           <p>Được tạo bởi AncestorTree · {new Date().getFullYear()}</p>
         </div>
       </div>

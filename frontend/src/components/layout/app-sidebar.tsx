@@ -40,10 +40,13 @@ import {
   UserCog,
   ClipboardList,
   LogOut,
+  LogIn,
+  UserPlus,
   ChevronUp,
   Trophy,
   BookOpen,
   ScrollText,
+  RotateCcw,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -57,6 +60,7 @@ const mainNavItems = [
   { title: 'Vinh danh', url: '/achievements', icon: Trophy },
   { title: 'Quỹ khuyến học', url: '/fund', icon: BookOpen },
   { title: 'Hương ước', url: '/charter', icon: ScrollText },
+  { title: 'Cầu đương', url: '/cau-duong', icon: RotateCcw },
   { title: 'Tài liệu', url: '/documents', icon: FileText },
 ];
 
@@ -67,6 +71,7 @@ const adminNavItems = [
   { title: 'QL Vinh danh', url: '/admin/achievements', icon: Trophy },
   { title: 'QL Quỹ & Học bổng', url: '/admin/fund', icon: BookOpen },
   { title: 'QL Hương ước', url: '/admin/charter', icon: ScrollText },
+  { title: 'QL Cầu đương', url: '/admin/cau-duong', icon: RotateCcw },
 ];
 
 export function AppSidebar() {
@@ -134,29 +139,50 @@ export function AppSidebar() {
 
       <SidebarFooter className="border-t">
         <SidebarMenu>
-          <SidebarMenuItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <SidebarMenuButton className="w-full">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage src={profile?.avatar_url} />
-                    <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col items-start text-sm">
-                    <span className="font-medium">{profile?.full_name || user?.email}</span>
-                    <span className="text-xs text-muted-foreground capitalize">{profile?.role || 'viewer'}</span>
-                  </div>
-                  <ChevronUp className="ml-auto h-4 w-4" />
+          {user ? (
+            <SidebarMenuItem>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <SidebarMenuButton className="w-full">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={profile?.avatar_url} />
+                      <AvatarFallback>{getInitials(profile?.full_name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex flex-col items-start text-sm">
+                      <span className="font-medium">{profile?.full_name || user?.email}</span>
+                      <span className="text-xs text-muted-foreground capitalize">{profile?.role || 'viewer'}</span>
+                    </div>
+                    <ChevronUp className="ml-auto h-4 w-4" />
+                  </SidebarMenuButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
+                  <DropdownMenuItem onClick={() => signOut()}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Đăng xuất
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </SidebarMenuItem>
+          ) : (
+            <>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/login'}>
+                  <Link href="/login">
+                    <LogIn className="h-4 w-4" />
+                    <span>Đăng nhập</span>
+                  </Link>
                 </SidebarMenuButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent side="top" className="w-[--radix-popper-anchor-width]">
-                <DropdownMenuItem onClick={() => signOut()}>
-                  <LogOut className="mr-2 h-4 w-4" />
-                  Đăng xuất
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </SidebarMenuItem>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={pathname === '/register'}>
+                  <Link href="/register">
+                    <UserPlus className="h-4 w-4" />
+                    <span>Đăng ký</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </>
+          )}
         </SidebarMenu>
       </SidebarFooter>
     </Sidebar>

@@ -9,7 +9,14 @@
 'use client';
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getProfiles, getProfile, updateProfile, updateUserRole } from '@/lib/supabase-data';
+import {
+  getProfiles,
+  getProfile,
+  updateProfile,
+  updateUserRole,
+  updateLinkedPerson,
+  updateEditRootPerson,
+} from '@/lib/supabase-data';
 import type { Profile, UserRole } from '@/types';
 
 // Query keys
@@ -54,10 +61,36 @@ export function useUpdateProfile() {
 
 export function useUpdateUserRole() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: ({ userId, role }: { userId: string; role: UserRole }) =>
       updateUserRole(userId, role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: profileKeys.all });
+    },
+  });
+}
+
+// FR-507: link a user to a person in the family tree
+export function useUpdateLinkedPerson() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, personId }: { userId: string; personId: string | null }) =>
+      updateLinkedPerson(userId, personId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: profileKeys.all });
+    },
+  });
+}
+
+// FR-508: set the subtree edit boundary for a branch editor
+export function useUpdateEditRootPerson() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, personId }: { userId: string; personId: string | null }) =>
+      updateEditRootPerson(userId, personId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: profileKeys.all });
     },

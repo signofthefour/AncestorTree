@@ -1,6 +1,6 @@
 # AncestorTree
 
-> **Gia Pha Dien Tu - Chi toc Dang Dinh, Thach Lam, Ha Tinh**
+> **Gia Pha Dien Tu - Họ Đặng làng Kỷ Các, Thach Lam, Ha Tinh**
 
 Phan mem quan ly gia pha dien tu giup gin giu va truyen thua thong tin dong ho qua cac the he.
 
@@ -27,6 +27,12 @@ Phan mem quan ly gia pha dien tu giup gin giu va truyen thua thong tin dong ho q
 - **Thu muc thanh vien** - Danh ba lien lac voi quyen rieng tu
 - **Lich su kien** - Theo doi ngay gio, le tet
 
+### Ceremony & Relations (v1.4-v1.5)
+- **Cau duong** - Phan cong trach nhiem cau duong theo lich am (thuat toan DFS)
+- **Quan he gia dinh** - Hien thi bo/me/anh-chi-em/vo-chong/con theo giao dien truc quan
+- **Them thanh vien co quan he** - Chon bo/me khi tao moi, them con vao gia dinh
+- **Cay loc theo goc** - Hien thi cay gia pha bat dau tu bat ky thanh vien nao
+
 ## Tech Stack
 
 | Layer | Technology |
@@ -34,7 +40,7 @@ Phan mem quan ly gia pha dien tu giup gin giu va truyen thua thong tin dong ho q
 | Frontend | Next.js 16, React 19, TypeScript 5 |
 | Styling | Tailwind CSS 4, shadcn/ui, Radix UI |
 | Database | Supabase (PostgreSQL, Auth, Storage, RLS) |
-| State | Zustand + React Query |
+| State | React Query (TanStack Query) |
 | Deployment | Vercel + Supabase Cloud |
 | Cost | **$0/thang** (100% free tier) |
 
@@ -52,9 +58,10 @@ cd frontend && pnpm install
 cp .env.local.example .env.local
 # Edit .env.local with your Supabase credentials
 
-# Setup database
-# Run frontend/supabase/database-setup.sql in Supabase SQL Editor
-# Run frontend/supabase/sprint6-migration.sql for v1.3 tables
+# Setup database (run in Supabase SQL Editor, in order)
+# 1. frontend/supabase/database-setup.sql      — core 7 tables
+# 2. frontend/supabase/sprint6-migration.sql   — v1.3 culture tables
+# 3. frontend/supabase/cau-duong-migration.sql — v1.4 ceremony tables
 
 # Run development server
 pnpm dev
@@ -95,7 +102,8 @@ AncestorTree/
 │   │   └── types/                  # TypeScript types
 │   └── supabase/                   # Database migrations
 │       ├── database-setup.sql      # Core tables (7)
-│       └── sprint6-migration.sql   # v1.3 tables (4)
+│       ├── sprint6-migration.sql   # v1.3 tables (4)
+│       └── cau-duong-migration.sql # v1.4 tables (2)
 ├── .sdlc-config.json               # SDLC configuration
 ├── CLAUDE.md                       # AI assistant guidelines
 └── README.md
@@ -103,13 +111,14 @@ AncestorTree/
 
 ## Database
 
-11 tables across 3 layers:
+13 tables across 4 layers:
 
 | Layer | Tables | Description |
 |-------|--------|-------------|
 | Core Genealogy | `people`, `families`, `children` | Pha he, quan he gia dinh |
 | Platform | `profiles`, `contributions`, `media`, `events` | Tai khoan, dong gop, su kien |
 | Culture (v1.3) | `achievements`, `fund_transactions`, `scholarships`, `clan_articles` | Vinh danh, quy, huong uoc |
+| Ceremony (v1.4) | `cau_duong_pools`, `cau_duong_assignments` | Phan cong cau duong le tet |
 
 All tables have Row Level Security (RLS) policies with 4 roles.
 
@@ -121,8 +130,8 @@ Full SDLC documentation (9 docs, 141KB):
 |-------|-----------|
 | 00-Foundation | Vision, Problem Statement, Market Research, Business Case |
 | 01-Planning | BRD (77 FRs + 17 NFRs), Roadmap |
-| 02-Design | Technical Design (11 tables), UI/UX Design |
-| 04-Build | Sprint Plan (6 sprints) |
+| 02-Design | Technical Design (13 tables), UI/UX Design |
+| 04-Build | Sprint Plan (7.5 sprints) |
 
 See [docs/README.md](./docs/README.md) for full documentation index.
 
@@ -134,6 +143,8 @@ v1.0.0 MVP      [##########] Done - Tree + CRUD + Admin + Deploy
 v1.1.0 Enhanced [##########] Done - Directory + Calendar + Contributions
 v1.2.0 Release  [##########] Done - GEDCOM + Book Generator + Photos
 v1.3.0 Culture  [##########] Done - Vinh danh + Quy khuyen hoc + Huong uoc
+v1.4.0 Ceremony [##########] Done - Cau duong rotation + DFS algorithm
+v1.5.0 Relations[##########] Done - Family relations UX + tree filter by root
 v2.0.0 Community [----------] Future - Nha tho ho, Notifications, Cross-clan
 ```
 

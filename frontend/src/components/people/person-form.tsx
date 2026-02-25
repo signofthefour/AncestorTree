@@ -2,12 +2,13 @@
  * @project AncestorTree
  * @file src/components/people/person-form.tsx
  * @description Person edit/create form component
- * @version 1.0.0
- * @updated 2026-02-24
+ * @version 1.1.0
+ * @updated 2026-02-25
  */
 
 'use client';
 
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { personSchema, type PersonFormData, defaultPersonValues } from '@/lib/validations/person';
@@ -31,11 +32,13 @@ import type { Person } from '@/types';
 
 interface PersonFormProps {
   person?: Person;
+  defaultValues?: Partial<PersonFormData>;
+  lockedGeneration?: number; // when set, generation field is auto-filled and read-only
   onSubmit: (data: PersonFormData) => Promise<void>;
   isLoading?: boolean;
 }
 
-export function PersonForm({ person, onSubmit, isLoading }: PersonFormProps) {
+export function PersonForm({ person, defaultValues: extraDefaults, lockedGeneration, onSubmit, isLoading }: PersonFormProps) {
   const form = useForm<PersonFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(personSchema) as any,
@@ -70,10 +73,17 @@ export function PersonForm({ person, onSubmit, isLoading }: PersonFormProps) {
       notes: person.notes || '',
       avatar_url: person.avatar_url || '',
       privacy_level: person.privacy_level,
-    } : defaultPersonValues,
+    } : { ...defaultPersonValues, ...extraDefaults },
   });
 
   const isLiving = form.watch('is_living');
+
+  // Sync lockedGeneration into form whenever parent selection changes
+  useEffect(() => {
+    if (lockedGeneration !== undefined) {
+      form.setValue('generation', lockedGeneration, { shouldValidate: true });
+    }
+  }, [lockedGeneration, form]);
 
   return (
     <Form {...form}>
@@ -218,8 +228,20 @@ export function PersonForm({ person, onSubmit, isLoading }: PersonFormProps) {
                   <FormItem>
                     <FormLabel>Đời *</FormLabel>
                     <FormControl>
-                      <Input type="number" min={1} max={20} {...field} />
+                      <Input
+                        type="number"
+                        min={1}
+                        max={20}
+                        {...field}
+                        disabled={lockedGeneration !== undefined}
+                        className={lockedGeneration !== undefined ? 'bg-muted text-muted-foreground' : ''}
+                      />
                     </FormControl>
+                    {lockedGeneration !== undefined && (
+                      <FormDescription className="text-xs text-amber-600">
+                        Tự động từ đời cha/mẹ — không thể sửa
+                      </FormDescription>
+                    )}
                     <FormMessage />
                   </FormItem>
                 )}

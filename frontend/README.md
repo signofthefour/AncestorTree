@@ -1,6 +1,6 @@
 # 🌳 Gia Phả Điện Tử - Frontend
 
-**Chi tộc Đặng Đình - Thạch Lâm - Hà Tĩnh**
+**Họ Đặng làng Kỷ Các**
 
 ## 🚀 Quick Start
 

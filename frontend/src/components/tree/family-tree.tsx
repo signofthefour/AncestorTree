@@ -35,6 +35,9 @@ import {
   Users,
   ArrowUpFromLine,
   ArrowDownFromLine,
+  Search,
+  X,
+  GitBranch,
 } from 'lucide-react';
 import type { Person } from '@/types';
 import type { TreeData } from '@/lib/supabase-data';
@@ -255,68 +258,102 @@ function Minimap({ nodes, viewBox, treeWidth, treeHeight, onViewportClick }: Min
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Tree Layout Builder
+// Tree Layout Builder — Hierarchical (Bottom-up subtree sizing)
 // ═══════════════════════════════════════════════════════════════════════════
+
+const COUPLE_GAP = 16;
 
 function buildTreeLayout(
   data: TreeData,
   collapsedNodes: Set<string>,
   viewMode: ViewMode,
-  focusPersonId: string | null
+  focusPersonId: string | null,
+  filterRootId: string | null = null
 ) {
   const { people, families, children } = data;
 
-  // Build parent-child relationships
-  const childToParents = new Map<string, string[]>();
-  const parentToChildren = new Map<string, string[]>();
+  // Build relationship maps
+  const fatherToFamilies = new Map<string, typeof families>();
+  const motherToFamilies = new Map<string, typeof families>();
+  const childToFamily = new Map<string, (typeof families)[0]>();
 
-  families.forEach((family) => {
-    const familyChildren = children.filter((c) => c.family_id === family.id);
-    const parentIds = [family.father_id, family.mother_id].filter(Boolean) as string[];
+  for (const family of families) {
+    if (family.father_id) {
+      if (!fatherToFamilies.has(family.father_id)) fatherToFamilies.set(family.father_id, []);
+      fatherToFamilies.get(family.father_id)!.push(family);
+    }
+    if (family.mother_id) {
+      if (!motherToFamilies.has(family.mother_id)) motherToFamilies.set(family.mother_id, []);
+      motherToFamilies.get(family.mother_id)!.push(family);
+    }
+  }
+  for (const child of children) {
+    if (!childToFamily.has(child.person_id)) {
+      const fam = families.find((f) => f.id === child.family_id);
+      if (fam) childToFamily.set(child.person_id, fam);
+    }
+  }
 
-    familyChildren.forEach((child) => {
-      childToParents.set(child.person_id, parentIds);
-      parentIds.forEach((parentId) => {
-        if (!parentToChildren.has(parentId)) parentToChildren.set(parentId, []);
-        parentToChildren.get(parentId)!.push(child.person_id);
-      });
-    });
-  });
-
-  // Determine visible people based on view mode and collapsed state
+  // Visible people selection
   const getVisiblePeopleIds = (): Set<string> => {
     const visible = new Set<string>();
 
-    if (viewMode === 'all') {
-      // Start with all people, then hide collapsed subtrees
-      people.forEach((p) => visible.add(p.id));
-
-      // Hide children of collapsed nodes
-      const hideDescendants = (personId: string) => {
-        const childIds = parentToChildren.get(personId) || [];
-        childIds.forEach((childId) => {
-          visible.delete(childId);
-          hideDescendants(childId);
-        });
+    if (filterRootId) {
+      // Branch filter: show filterRootId and all descendants (follows both father and mother families)
+      const addWithDescendants = (personId: string) => {
+        if (visible.has(personId)) return;
+        visible.add(personId);
+        const fams = [
+          ...(fatherToFamilies.get(personId) || []),
+          ...(motherToFamilies.get(personId) || []),
+        ];
+        for (const fam of fams) {
+          if (fam.father_id && fam.father_id !== personId) visible.add(fam.father_id);
+          if (fam.mother_id && fam.mother_id !== personId) visible.add(fam.mother_id);
+          children
+            .filter((c) => c.family_id === fam.id)
+            .forEach((c) => addWithDescendants(c.person_id));
+        }
       };
+      addWithDescendants(filterRootId);
+      return visible;
+    }
 
-      collapsedNodes.forEach((nodeId) => {
-        hideDescendants(nodeId);
-      });
+    if (viewMode === 'all') {
+      people.forEach((p) => visible.add(p.id));
+      const hideDescendants = (personId: string) => {
+        const fams = fatherToFamilies.get(personId) || [];
+        for (const fam of fams) {
+          children
+            .filter((c) => c.family_id === fam.id)
+            .forEach((c) => {
+              visible.delete(c.person_id);
+              hideDescendants(c.person_id);
+            });
+        }
+      };
+      collapsedNodes.forEach((nodeId) => hideDescendants(nodeId));
     } else if (viewMode === 'ancestors' && focusPersonId) {
-      // Show only ancestors of focus person
       const addAncestors = (personId: string) => {
         visible.add(personId);
-        const parentIds = childToParents.get(personId) || [];
-        parentIds.forEach(addAncestors);
+        const fam = childToFamily.get(personId);
+        if (fam?.father_id) addAncestors(fam.father_id);
+        if (fam?.mother_id) addAncestors(fam.mother_id);
       };
       addAncestors(focusPersonId);
     } else if (viewMode === 'descendants' && focusPersonId) {
-      // Show only descendants of focus person
       const addDescendants = (personId: string) => {
+        if (visible.has(personId)) return;
         visible.add(personId);
-        const childIds = parentToChildren.get(personId) || [];
-        childIds.forEach(addDescendants);
+        const fams = [
+          ...(fatherToFamilies.get(personId) || []),
+          ...(motherToFamilies.get(personId) || []),
+        ];
+        for (const fam of fams) {
+          if (fam.father_id && fam.father_id !== personId) visible.add(fam.father_id);
+          if (fam.mother_id && fam.mother_id !== personId) visible.add(fam.mother_id);
+          children.filter((c) => c.family_id === fam.id).forEach((c) => addDescendants(c.person_id));
+        }
       };
       addDescendants(focusPersonId);
     } else {
@@ -329,105 +366,171 @@ function buildTreeLayout(
   const visibleIds = getVisiblePeopleIds();
   const visiblePeople = people.filter((p) => visibleIds.has(p.id));
 
-  // Group by generation
-  const byGeneration = new Map<number, Person[]>();
-  visiblePeople.forEach((p) => {
-    const gen = p.generation || 1;
-    if (!byGeneration.has(gen)) byGeneration.set(gen, []);
-    byGeneration.get(gen)!.push(p);
-  });
+  if (visiblePeople.length === 0) {
+    return { nodes: [], connections: [], width: 0, height: 0, offsetX: 0 };
+  }
 
+  // Helpers
+  const getVisibleChildrenAsFather = (personId: string): string[] => {
+    const fams = fatherToFamilies.get(personId) || [];
+    const result: string[] = [];
+    for (const fam of fams) {
+      children
+        .filter((c) => c.family_id === fam.id && visibleIds.has(c.person_id))
+        .sort((a, b) => a.sort_order - b.sort_order)
+        .forEach((c) => { if (!result.includes(c.person_id)) result.push(c.person_id); });
+    }
+    return result;
+  };
+
+  const getVisibleWife = (personId: string): string | null => {
+    const fams = fatherToFamilies.get(personId) || [];
+    for (const fam of fams) {
+      if (fam.mother_id && visibleIds.has(fam.mother_id)) return fam.mother_id;
+    }
+    return null;
+  };
+
+  // Wives will be positioned adjacent to husband — mark them
+  const positionedAsWife = new Set<string>();
+  for (const p of visiblePeople) {
+    if (p.gender === 2) {
+      const fams = motherToFamilies.get(p.id) || [];
+      if (fams.some((f) => f.father_id && visibleIds.has(f.father_id))) {
+        positionedAsWife.add(p.id);
+      }
+    }
+  }
+
+  // Root nodes: not a wife, and no visible father
+  const roots: string[] = [];
+  for (const p of visiblePeople) {
+    if (positionedAsWife.has(p.id)) continue;
+    const parentFam = childToFamily.get(p.id);
+    if (!parentFam?.father_id || !visibleIds.has(parentFam.father_id)) {
+      roots.push(p.id);
+    }
+  }
+
+  // Bottom-up: subtree widths
+  const subtreeWidths = new Map<string, number>();
+  const computeSubtreeWidth = (personId: string): number => {
+    if (subtreeWidths.has(personId)) return subtreeWidths.get(personId)!;
+    const wife = getVisibleWife(personId);
+    const visChildren = collapsedNodes.has(personId) ? [] : getVisibleChildrenAsFather(personId);
+    const coupleWidth = NODE_WIDTH + (wife ? COUPLE_GAP + NODE_WIDTH : 0);
+    const childrenWidth = visChildren.length > 0
+      ? visChildren.reduce((s, c) => s + computeSubtreeWidth(c), 0) + (visChildren.length - 1) * SIBLING_GAP
+      : 0;
+    const result = Math.max(coupleWidth, childrenWidth);
+    subtreeWidths.set(personId, result);
+    return result;
+  };
+  for (const root of roots) computeSubtreeWidth(root);
+
+  // Top-down: assign X positions
+  const xPositions = new Map<string, number>();
+  const assignPositions = (personId: string, startX: number) => {
+    const sw = subtreeWidths.get(personId) || NODE_WIDTH;
+    const wife = getVisibleWife(personId);
+    const visChildren = collapsedNodes.has(personId) ? [] : getVisibleChildrenAsFather(personId);
+    const coupleWidth = NODE_WIDTH + (wife ? COUPLE_GAP + NODE_WIDTH : 0);
+    const centerX = startX + sw / 2;
+
+    // Center couple unit
+    const fatherX = centerX - coupleWidth / 2;
+    xPositions.set(personId, fatherX);
+    if (wife) xPositions.set(wife, fatherX + NODE_WIDTH + COUPLE_GAP);
+
+    // Children spread centered under couple
+    if (visChildren.length > 0) {
+      const totalChildW = visChildren.reduce((s, c) => s + (subtreeWidths.get(c) || NODE_WIDTH), 0)
+        + (visChildren.length - 1) * SIBLING_GAP;
+      let childX = centerX - totalChildW / 2;
+      for (const child of visChildren) {
+        assignPositions(child, childX);
+        childX += (subtreeWidths.get(child) || NODE_WIDTH) + SIBLING_GAP;
+      }
+    }
+  };
+
+  let rootStartX = 0;
+  for (const root of roots) {
+    assignPositions(root, rootStartX);
+    rootStartX += (subtreeWidths.get(root) || NODE_WIDTH) + SIBLING_GAP * 2;
+  }
+
+  const minGen = Math.min(...visiblePeople.map((p) => p.generation || 1));
   const nodes: TreeNodeData[] = [];
-  const connections: TreeConnectionData[] = [];
-
-  // Layout by generation
-  const generations = [...byGeneration.keys()].sort((a, b) => a - b);
-
-  generations.forEach((gen, genIndex) => {
-    const genPeople = byGeneration.get(gen)!;
-    const y = genIndex * LEVEL_HEIGHT + 20;
-    const totalWidth = genPeople.length * (NODE_WIDTH + SIBLING_GAP) - SIBLING_GAP;
-    const startX = -totalWidth / 2;
-
-    genPeople.forEach((person, i) => {
-      const x = startX + i * (NODE_WIDTH + SIBLING_GAP);
-      const hasChildren = (parentToChildren.get(person.id) || []).some((cid) =>
-        people.some((p) => p.id === cid)
-      );
-
-      nodes.push({
-        person,
-        x,
-        y,
-        isCollapsed: collapsedNodes.has(person.id),
-        hasChildren,
-        isVisible: true,
-      });
+  for (const person of visiblePeople) {
+    if (!xPositions.has(person.id)) continue;
+    nodes.push({
+      person,
+      x: xPositions.get(person.id)!,
+      y: (person.generation - minGen) * LEVEL_HEIGHT + 20,
+      isCollapsed: collapsedNodes.has(person.id),
+      hasChildren: getVisibleChildrenAsFather(person.id).length > 0,
+      isVisible: true,
     });
-  });
+  }
 
   // Build connections
-  const personPositions = new Map(nodes.map((n) => [n.person.id, { x: n.x, y: n.y }]));
+  const connections: TreeConnectionData[] = [];
+  const personPos = new Map(nodes.map((n) => [n.person.id, { x: n.x, y: n.y }]));
 
-  families.forEach((family) => {
-    const fatherPos = family.father_id ? personPositions.get(family.father_id) : null;
-    const motherPos = family.mother_id ? personPositions.get(family.mother_id) : null;
+  for (const family of families) {
+    const fatherPos = family.father_id ? personPos.get(family.father_id) : null;
+    const motherPos = family.mother_id ? personPos.get(family.mother_id) : null;
+    if (!fatherPos && !motherPos) continue;
 
-    // Couple connection
+    // Couple line (horizontal, between nodes)
     if (fatherPos && motherPos) {
       connections.push({
         id: `couple-${family.id}`,
-        x1: fatherPos.x + NODE_WIDTH / 2,
+        x1: fatherPos.x + NODE_WIDTH,
         y1: fatherPos.y + NODE_HEIGHT / 2,
-        x2: motherPos.x + NODE_WIDTH / 2,
+        x2: motherPos.x,
         y2: motherPos.y + NODE_HEIGHT / 2,
         type: 'couple',
         isVisible: true,
       });
     }
 
-    // Parent to children connections
-    const parentX = fatherPos
-      ? motherPos
-        ? (fatherPos.x + motherPos.x) / 2 + NODE_WIDTH / 2
-        : fatherPos.x + NODE_WIDTH / 2
-      : motherPos
-        ? motherPos.x + NODE_WIDTH / 2
-        : null;
-    const parentY = fatherPos?.y ?? motherPos?.y;
+    const parentIsCollapsed =
+      (family.father_id && collapsedNodes.has(family.father_id)) ||
+      (!family.father_id && family.mother_id && collapsedNodes.has(family.mother_id));
+    if (parentIsCollapsed) continue;
 
-    // Check if parent is collapsed
-    const parentId = family.father_id || family.mother_id;
-    const isParentCollapsed = parentId && collapsedNodes.has(parentId);
+    const parentPos = fatherPos ?? motherPos!;
+    const familyCenterX =
+      fatherPos && motherPos
+        ? (fatherPos.x + NODE_WIDTH + motherPos.x) / 2
+        : parentPos.x + NODE_WIDTH / 2;
 
-    if (parentX !== null && parentY !== undefined && !isParentCollapsed) {
-      const familyChildren = children.filter((c) => c.family_id === family.id);
-      familyChildren.forEach((child) => {
-        const childPos = personPositions.get(child.person_id);
-        if (childPos) {
-          connections.push({
-            id: `child-${family.id}-${child.person_id}`,
-            x1: parentX,
-            y1: parentY + NODE_HEIGHT,
-            x2: childPos.x + NODE_WIDTH / 2,
-            y2: childPos.y,
-            type: 'parent-child',
-            isVisible: true,
-          });
-        }
-      });
-    }
-  });
+    children.filter((c) => c.family_id === family.id).forEach((child) => {
+      const childPos = personPos.get(child.person_id);
+      if (childPos) {
+        connections.push({
+          id: `child-${family.id}-${child.person_id}`,
+          x1: familyCenterX,
+          y1: parentPos.y + NODE_HEIGHT,
+          x2: childPos.x + NODE_WIDTH / 2,
+          y2: childPos.y,
+          type: 'parent-child',
+          isVisible: true,
+        });
+      }
+    });
+  }
 
-  // Calculate bounds
-  let minX = 0,
-    maxX = 0,
-    maxY = 0;
-  nodes.forEach((n) => {
+  // Bounds
+  let minX = Infinity, maxX = -Infinity, maxY = 0;
+  for (const n of nodes) {
     minX = Math.min(minX, n.x);
     maxX = Math.max(maxX, n.x + NODE_WIDTH);
     maxY = Math.max(maxY, n.y + NODE_HEIGHT);
-  });
+  }
+  if (!isFinite(minX)) { minX = 0; maxX = 0; }
 
   return {
     nodes,
@@ -456,6 +559,30 @@ export function FamilyTree() {
   const [collapsedNodes, setCollapsedNodes] = useState<Set<string>>(new Set());
   const [viewMode, setViewMode] = useState<ViewMode>('all');
   const [showMinimap, setShowMinimap] = useState(true);
+  // Lazy init from ?root= URL param (component is ssr:false so window is always available here)
+  const [filterRootId, setFilterRootId] = useState<string | null>(() =>
+    typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('root')
+      : null
+  );
+  const [filterSearch, setFilterSearch] = useState('');
+  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+
+  const handleSetFilterRoot = useCallback((person: Person | null) => {
+    setFilterRootId(person?.id ?? null);
+    setFilterSearch('');
+    setFilterDropdownOpen(false);
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (person) params.set('root', person.id);
+      else params.delete('root');
+      window.history.replaceState(null, '', params.toString() ? `?${params.toString()}` : window.location.pathname);
+    }
+  }, []);
+
+  const filterRootPerson = filterRootId
+    ? data?.people.find((p) => p.id === filterRootId) ?? null
+    : null;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
@@ -478,8 +605,8 @@ export function FamilyTree() {
   // Layout
   const layout = useMemo(() => {
     if (!data || data.people.length === 0) return null;
-    return buildTreeLayout(data, collapsedNodes, viewMode, selectedPerson?.id || null);
-  }, [data, collapsedNodes, viewMode, selectedPerson?.id]);
+    return buildTreeLayout(data, collapsedNodes, viewMode, selectedPerson?.id || null, filterRootId);
+  }, [data, collapsedNodes, viewMode, selectedPerson?.id, filterRootId]);
 
   // Handlers
   const handleZoomIn = () => setScale((s) => Math.min(s + 0.1, 2));
@@ -617,6 +744,81 @@ export function FamilyTree() {
 
   return (
     <div className="space-y-4">
+      {/* Branch filter */}
+      <div className="flex flex-wrap items-center gap-2 p-3 bg-muted/40 rounded-lg border border-dashed">
+        <GitBranch className="h-4 w-4 text-muted-foreground shrink-0" />
+        <span className="text-sm font-medium shrink-0">Xem nhánh từ:</span>
+
+        {filterRootPerson ? (
+          <div className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-md px-3 py-1">
+            <span className="text-sm font-medium">{filterRootPerson.display_name}</span>
+            <span className="text-xs text-muted-foreground">Đời {filterRootPerson.generation}</span>
+            <button
+              onClick={() => handleSetFilterRoot(null)}
+              className="ml-1 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        ) : (
+          <div className="relative">
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1.5 h-3.5 w-3.5 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Tìm thành viên..."
+                value={filterSearch}
+                onChange={(e) => {
+                  setFilterSearch(e.target.value);
+                  setFilterDropdownOpen(e.target.value.length >= 2);
+                }}
+                onFocus={() => filterSearch.length >= 2 && setFilterDropdownOpen(true)}
+                onBlur={() => setTimeout(() => setFilterDropdownOpen(false), 200)}
+                className="pl-8 pr-3 py-1 text-sm border rounded-md bg-background w-48 focus:outline-none focus:ring-1 focus:ring-primary"
+              />
+            </div>
+            {filterDropdownOpen && data?.people && (
+              <div className="absolute z-50 top-full mt-1 bg-background border rounded-md shadow-lg w-64 max-h-48 overflow-y-auto">
+                {data.people
+                  .filter((p) =>
+                    filterSearch.length >= 2 &&
+                    p.display_name.toLowerCase().includes(filterSearch.toLowerCase())
+                  )
+                  .slice(0, 10)
+                  .map((person) => (
+                    <button
+                      key={person.id}
+                      onMouseDown={() => handleSetFilterRoot(person)}
+                      className="w-full text-left flex items-center gap-2 px-3 py-2 hover:bg-muted transition-colors"
+                    >
+                      <div
+                        className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-medium shrink-0 ${
+                          person.gender === 1 ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'
+                        }`}
+                      >
+                        {person.display_name.slice(-1)}
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium">{person.display_name}</p>
+                        <p className="text-[10px] text-muted-foreground">Đời {person.generation}</p>
+                      </div>
+                    </button>
+                  ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {filterRootPerson && (
+          <span className="text-xs text-muted-foreground ml-auto">
+            Nhánh {filterRootPerson.display_name} · Đời {filterRootPerson.generation}
+          </span>
+        )}
+        {!filterRootPerson && (
+          <span className="text-xs text-muted-foreground ml-auto">Đang xem: Toàn bộ gia phả</span>
+        )}
+      </div>
+
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-2">
         {/* Zoom controls */}

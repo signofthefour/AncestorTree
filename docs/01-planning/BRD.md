@@ -2,7 +2,7 @@
 project: AncestorTree
 path: docs/01-planning/BRD.md
 type: planning
-version: 1.1.0
+version: 1.3.0
 updated: 2026-02-25
 owner: "@pm"
 status: approved
@@ -12,10 +12,12 @@ status: approved
 
 ## 1. Document Control
 
-| Version | Date       | Author | Changes                                            |
-|---------|------------|--------|----------------------------------------------------|
-| 1.0.0   | 2026-02-24 | @pm    | Initial draft                                      |
-| 1.1.0   | 2026-02-25 | @pm    | Add Vinh danh, Quỹ khuyến học, Hương ước          |
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0.0 | 2026-02-24 | @pm | Initial draft |
+| 1.1.0 | 2026-02-25 | @pm | Add Vinh danh, Quỹ khuyến học, Hương ước |
+| 1.2.0 | 2026-02-25 | @pm | Add Lịch Cầu đương — phân công xoay vòng chủ lễ |
+| 1.3.0 | 2026-02-25 | @pm | Sprint 7.5 — Family Relations UX, Tree hierarchical layout, Branch filter, Tree-scoped editor (FR-507~510) |
 
 ---
 
@@ -52,7 +54,7 @@ status: approved
 | **FR-102** | Thông tin cơ bản: tên, giới tính, năm sinh/mất | P0 | Fields required/optional đúng |
 | **FR-103** | Thông tin mở rộng: tiểu sử, ảnh, ghi chú | P1 | Support upload ảnh |
 | **FR-104** | Thông tin liên lạc: SĐT, email, Zalo, Facebook | P1 | Links clickable |
-| **FR-105** | Đời thứ mấy (generation) | P0 | Auto-calculate từ parent |
+| **FR-105** | Đời thứ mấy (generation) | P0 | Auto-fill + khoá khi chọn cha/mẹ; tự nhập khi không có parent |
 | **FR-106** | Chi/nhánh | P0 | Assignable by admin |
 | **FR-107** | Trạng thái: còn sống/đã mất | P0 | Affects display (muted style) |
 
@@ -64,6 +66,10 @@ status: approved
 | **FR-202** | Liên kết vợ-chồng | P0 | Support multiple marriages |
 | **FR-203** | Chính tộc (patrilineal) flag | P0 | Highlight in tree view |
 | **FR-204** | Thứ tự con trong gia đình | P1 | Sortable, affects display order |
+| **FR-205** | Xem quan hệ gia đình từ trang hồ sơ | P1 | Card hiển thị cha/mẹ, anh chị em, vợ/chồng, con |
+| **FR-206** | Thêm vợ/chồng từ trang hồ sơ | P1 | Tạo mới hoặc chọn người có sẵn trong dòng họ |
+| **FR-207** | Thêm con từ trang hồ sơ | P1 | Tạo mới hoặc chọn người có sẵn; chỉ editor/admin |
+| **FR-208** | Chọn cha/mẹ khi tạo thành viên mới | P1 | Đời tự điền và khoá theo đời cha/mẹ |
 
 ### 3.3 Epic: Cây Gia Phả (Family Tree)
 
@@ -76,6 +82,9 @@ status: approved
 | **FR-305** | Xem hậu duệ (descendants) | P1 | Filter from selected person |
 | **FR-306** | Hiển thị số người khi thu gọn | P1 | "📦 X người" badge |
 | **FR-307** | Đường kết nối orthogonal | P0 | Không có đường chéo |
+| **FR-308** | Layout cây phân nhánh (hierarchical) | P1 | Bottom-up subtree sizing; mỗi người canh giữa con cháu |
+| **FR-309** | Filter nhánh theo tổ tiên | P1 | Combobox chọn người → hiển thị toàn bộ con cháu |
+| **FR-310** | Shareable URL cho filter nhánh | P2 | `/tree?root=<id>` — link có thể chia sẻ |
 
 ### 3.4 Epic: Tìm kiếm & Lọc (Search & Filter)
 
@@ -96,6 +105,10 @@ status: approved
 | **FR-504** | Role: Admin | P0 | Full CRUD access |
 | **FR-505** | Role: Viewer | P0 | Read-only access |
 | **FR-506** | Admin Panel | P0 | Manage users, roles |
+| **FR-507** | Gắn tài khoản với thành viên trong cây gia phả | P1 | Admin liên kết profile → person; hiển thị "Bạn là [Tên]" |
+| **FR-508** | Quyền editor theo nhánh (Tree-scoped editor) | P1 | User được sửa bản thân, vợ/chồng, và toàn bộ con cháu |
+| **FR-509** | Admin gán quyền edit theo chi/nhánh | P2 | Chọn person gốc → user có quyền edit subtree đó |
+| **FR-510** | Enforce ranh giới subtree (server-side) | P1 | RLS / middleware chặn edit ngoài phạm vi được cấp |
 
 ### 3.6 Epic: Đóng góp & Kiểm duyệt (Contributions)
 
@@ -175,6 +188,20 @@ status: approved
 | **FR-1404** | Thứ tự hiển thị bài viết (sort_order) | P2 | Kéo thả hoặc nhập số thứ tự |
 | **FR-1405** | Lịch sử chỉnh sửa (ai sửa, khi nào) | P2 | Audit trail cho nội dung |
 | **FR-1406** | Hiển thị nổi bật trên trang chủ | P2 | Trích dẫn hoặc card gia huấn |
+
+### 3.14 Epic: Lịch Cầu đương (Ceremony Rotation Schedule)
+
+> **Context:** Cầu đương là nghi lễ cúng tổ tiên xoay vòng trong dòng họ. Người được phân công phải là nam giới đã lập gia đình, dưới 70 tuổi âm, xoay vòng theo thứ tự DFS của cây gia phả (đời trên trước, trong mỗi đời theo thứ tự gia đình).
+
+| ID | Requirement | Priority | Acceptance Criteria |
+|----|-------------|----------|---------------------|
+| **FR-1501** | Xem danh sách thành viên đủ điều kiện Cầu đương | P1 | Hiển thị danh sách theo thứ tự DFS, kèm tuổi âm và đời |
+| **FR-1502** | Xem lịch phân công Cầu đương theo năm | P1 | 4 lễ/năm: Tết, Rằm tháng Giêng, Giỗ tổ, Rằm tháng Bảy |
+| **FR-1503** | Admin tạo/quản lý nhóm Cầu đương (pool) | P1 | Cấu hình: tổ tông, đời tối thiểu, tuổi tối đa |
+| **FR-1504** | Admin phân công tự động theo thứ tự xoay vòng DFS | P1 | Auto-assign người tiếp theo trong danh sách |
+| **FR-1505** | Người được phân công ủy quyền cho người khác | P1 | Ghi nhận người ủy quyền, lý do, người thực hiện |
+| **FR-1506** | Đề xuất đổi ngày thực hiện (sớm/muộn hơn) | P2 | Cập nhật actual_date, lý do, trạng thái rescheduled |
+| **FR-1507** | Ghi nhận hoàn thành sau khi thực hiện lễ | P1 | Cập nhật status=completed, actual_date |
 
 ---
 
@@ -259,8 +286,9 @@ status: approved
 ├─────────────────────────────────────────────────────────────┤
 │ • id (PK)                                                   │
 │ • user_id - FK to Supabase auth.users                       │
-│ • role - 'admin' | 'viewer'                                 │
-│ • linked_person_handle - FK to people (optional)            │
+│ • role - 'admin' | 'editor' | 'viewer'                      │
+│ • linked_person_id - FK to people (optional, Sprint 7.5+)   │
+│ • edit_root_person_id - subtree edit boundary (optional)     │
 └─────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────┐
@@ -398,6 +426,10 @@ status: approved
 | **FR-1201~06** | **Vinh danh thành tích** | **P1** | **New in v1.1 - Achievement honors** |
 | **FR-1301~08** | **Quỹ khuyến học & học bổng** | **P1** | **New in v1.1 - Education fund** |
 | **FR-1401~06** | **Hương ước dòng họ** | **P1** | **New in v1.1 - Family charter** |
+| **FR-1501~07** | **Lịch Cầu đương xoay vòng** | **P1** | **New in v1.2 - Ceremony rotation schedule** |
+| **FR-205~08** | **Family Relations UX từ trang hồ sơ** | **P1** | **New in v1.3 - Xem/thêm quan hệ từ người cụ thể** |
+| **FR-308~10** | **Tree phân nhánh + Branch filter** | **P1** | **New in v1.3 - Hierarchical layout, filter nhánh, shareable URL** |
+| **FR-507~10** | **Tree-scoped editor (user ↔ person mapping)** | **P1** | **New in v1.3 - Tự quản lý nhánh gia đình** |
 
 ### 9.3 Differentiation Strategy
 

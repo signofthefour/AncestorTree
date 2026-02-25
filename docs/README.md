@@ -10,7 +10,7 @@ status: approved
 
 # AncestorTree Documentation
 
-> Gia Phả Điện Tử - Chi tộc Đặng Đình, Thạch Lâm, Hà Tĩnh
+> Gia Phả Điện Tử - Họ Đặng làng Kỷ Các
 
 ## SDLC Framework v6.1.0 - LITE Tier
 

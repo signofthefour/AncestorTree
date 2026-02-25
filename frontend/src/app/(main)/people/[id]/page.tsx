@@ -45,6 +45,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { getZodiacYear } from '@/types';
+import { FamilyRelationsCard } from '@/components/people/family-relations-card';
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -325,6 +326,9 @@ export default function PersonDetailPage({ params }: PageProps) {
           </CardContent>
         </Card>
       )}
+
+      {/* Family Relations */}
+      <FamilyRelationsCard person={person} canEdit={canEdit} />
 
       {/* Photo Gallery */}
       <PhotoGallery personId={id} canEdit={canEdit} />
