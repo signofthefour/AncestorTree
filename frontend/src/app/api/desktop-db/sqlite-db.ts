@@ -65,6 +65,7 @@ async function initDatabase(): Promise<Database> {
   database.run('PRAGMA foreign_keys = ON');
 
   // Run migrations on init (CTO B-1: must run inside Next.js process, not Electron main)
+  // Pass database explicitly since module-level `db` is not yet assigned at this point.
   applyMigrations(database);
 
   return database;
@@ -73,14 +74,17 @@ async function initDatabase(): Promise<Database> {
 /**
  * Flush the in-memory database to disk.
  * Uses atomic write: write to .tmp then rename to prevent corruption.
+ * Accepts optional database param for use during initDatabase() before
+ * the module-level `db` is set.
  */
-export function flushToDisk(): void {
-  if (!db) return;
+export function flushToDisk(database?: Database): void {
+  const target = database ?? db;
+  if (!target) return;
 
   const filePath = getDbPath();
   const tmpPath = filePath + '.tmp';
 
-  const data = db.export();
+  const data = target.export();
   const buffer = Buffer.from(data);
 
   fs.writeFileSync(tmpPath, buffer);
@@ -140,7 +144,7 @@ function applyMigrations(database: Database): void {
       }
     }
 
-    if (applied) flushToDisk();
+    if (applied) flushToDisk(database);
     break; // Use first valid dir
   }
 }
