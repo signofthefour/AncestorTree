@@ -1,6 +1,6 @@
 # 🌳 Gia Phả Điện Tử - Frontend
 
-**Họ Đặng làng Kỷ Các**
+**Họ Nguyễn làng Đò Mười, Nghĩa Sơn**
 
 ## 🚀 Quick Start
 
@@ -20,6 +20,7 @@ pnpm install
 cp .env.local.example .env.local
 
 # Edit .env.local with your Supabase credentials
+# Include NEXT_PUBLIC_APP_URL=https://<your-vercel-domain> for auth email redirects
 ```
 
 ### Development

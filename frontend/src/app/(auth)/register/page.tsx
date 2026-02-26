@@ -51,7 +51,7 @@ export default function RegisterPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mb-4">
-            Đ
+            N
           </div>
           <CardTitle>Đăng ký</CardTitle>
           <CardDescription>

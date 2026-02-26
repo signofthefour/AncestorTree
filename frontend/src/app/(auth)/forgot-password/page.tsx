@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { supabase } from '@/lib/supabase';
+import { getAppUrl } from '@/lib/url';
 import { toast } from 'sonner';
 import { ArrowLeft, Mail } from 'lucide-react';
 
@@ -29,7 +30,7 @@ export default function ForgotPasswordPage() {
 
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
+        redirectTo: `${getAppUrl()}/reset-password`,
       });
       if (error) throw error;
       setSent(true);
@@ -47,7 +48,7 @@ export default function ForgotPasswordPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mb-4">
-            Đ
+            N
           </div>
           <CardTitle>Quên mật khẩu</CardTitle>
           <CardDescription>

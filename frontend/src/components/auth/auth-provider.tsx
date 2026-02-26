@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
 import { supabase } from '@/lib/supabase';
 import { getProfile } from '@/lib/supabase-data';
+import { getAppUrl } from '@/lib/url';
 import type { User, Session } from '@supabase/supabase-js';
 import type { Profile } from '@/types';
 
@@ -83,6 +84,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       password,
       options: {
         data: { full_name: fullName },
+        emailRedirectTo: `${getAppUrl()}/login`,
       },
     });
     if (error) throw error;

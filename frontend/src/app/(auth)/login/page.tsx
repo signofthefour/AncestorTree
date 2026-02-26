@@ -38,11 +38,11 @@ export default function LoginPage() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="mx-auto w-12 h-12 bg-emerald-600 rounded-lg flex items-center justify-center text-white font-bold text-xl mb-4">
-            Đ
+            N
           </div>
           <CardTitle>Đăng nhập</CardTitle>
           <CardDescription>
-            Đăng nhập vào Gia Phả Điện Tử - Họ Đặng làng Kỷ Các
+            Đăng nhập vào Gia Phả Điện Tử - Họ Nguyễn làng Đò Mười, Nghĩa Sơn
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -75,7 +75,7 @@ UPDATE public.profiles SET role = 'admin' WHERE user_id = 'aaaaaaaa-0001-4000-a0
 
 -- Đời 1: Thủy tổ
 INSERT INTO public.people (id, display_name, gender, generation, is_living, birth_year, death_year, death_lunar, biography, privacy_level) VALUES
-('bbbbbbbb-0001-4000-b000-000000000001', 'Đặng Văn Thủy Tổ', 1, 1, false, '1850', '1920', '12/3', 'Thủy tổ dòng họ Đặng làng Kỷ Các.', 0),
+('bbbbbbbb-0001-4000-b000-000000000001', 'Nguyễn Văn Thủy Tổ', 1, 1, false, '1850', '1920', '12/3', 'Thủy tổ dòng họ Nguyễn làng Đò Mười, Nghĩa Sơn.', 0),
 ('bbbbbbbb-0002-4000-b000-000000000002', 'Nguyễn Thị Từ', 2, 1, false, '1855', '1935', '8/7', 'Vợ cụ Thủy Tổ.', 0);
 
 -- Đời 2: 3 con
