@@ -21,14 +21,14 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Gia Phả Điện Tử - Chi tộc Đặng Đình',
-    template: '%s | Gia Phả Đặng Đình',
+    default: 'Gia Phả Điện Tử - Họ Đặng làng Kỷ Các',
+    template: '%s | Gia Phả Họ Đặng',
   },
   description: 'Phần mềm quản lý gia phả điện tử cho Họ Đặng làng Kỷ Các. Lưu trữ thông tin dòng họ, cây gia phả, lịch giỗ chạp.',
   keywords: ['gia phả', 'gia phả điện tử', 'Họ Đặng', 'làng Kỷ Các', 'dòng họ', 'cây gia phả', 'phả hệ'],
-  authors: [{ name: 'Chi tộc Đặng Đình' }],
+  authors: [{ name: 'Họ Đặng làng Kỷ Các' }],
   openGraph: {
-    title: 'Gia Phả Điện Tử - Chi tộc Đặng Đình',
+    title: 'Gia Phả Điện Tử - Họ Đặng làng Kỷ Các',
     description: 'Gìn giữ tinh hoa - Tiếp bước cha ông',
     type: 'website',
     locale: 'vi_VN',
