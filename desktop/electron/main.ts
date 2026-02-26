@@ -2,12 +2,13 @@
  * @project AncestorTree Desktop
  * @file desktop/electron/main.ts
  * @description Electron main process — app lifecycle, window management, server start
- * @version 1.0.0
+ * @version 1.1.0
  * @updated 2026-02-26
  */
 
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, shell, dialog } from 'electron';
 import * as path from 'path';
+import { autoUpdater } from 'electron-updater';
 import { startServer, stopServer, getServerUrl } from './server';
 
 let mainWindow: BrowserWindow | null = null;
@@ -101,6 +102,11 @@ app.whenReady().then(async () => {
       void loadApp();
     }
   });
+
+  // Check for updates (only in production, skip in dev)
+  if (app.isPackaged) {
+    setupAutoUpdater();
+  }
 });
 
 // Quit when all windows are closed (except macOS)
@@ -114,3 +120,40 @@ app.on('window-all-closed', () => {
 app.on('before-quit', async () => {
   await stopServer();
 });
+
+// ─── Auto-updater ────────────────────────────────────────────────────────────
+
+function setupAutoUpdater(): void {
+  autoUpdater.autoDownload = false; // ask user before downloading
+
+  autoUpdater.on('update-available', (info) => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Có phiên bản mới',
+      message: `Phiên bản ${info.version} đã có sẵn. Tải xuống ngay?`,
+      buttons: ['Tải xuống', 'Để sau'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.downloadUpdate();
+    });
+  });
+
+  autoUpdater.on('update-downloaded', () => {
+    dialog.showMessageBox({
+      type: 'info',
+      title: 'Cập nhật sẵn sàng',
+      message: 'Cập nhật đã tải xong. Khởi động lại để áp dụng?',
+      buttons: ['Khởi động lại', 'Để sau'],
+      defaultId: 0,
+    }).then(({ response }) => {
+      if (response === 0) autoUpdater.quitAndInstall();
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    console.error('[AutoUpdater] Error:', err.message);
+  });
+
+  // Check once 10s after launch
+  setTimeout(() => autoUpdater.checkForUpdates(), 10_000);
+}

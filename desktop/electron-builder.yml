@@ -2,6 +2,12 @@ appId: com.ancestortree.desktop
 productName: Gia Phả Điện Tử
 copyright: Copyright © 2026 Minh-Tam-Solution
 
+# GitHub Releases for auto-update (electron-updater)
+publish:
+  provider: github
+  owner: Minh-Tam-Solution
+  repo: AncestorTree
+
 directories:
   output: release
   buildResources: build

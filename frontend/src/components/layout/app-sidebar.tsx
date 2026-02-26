@@ -47,6 +47,7 @@ import {
   BookOpen,
   ScrollText,
   RotateCcw,
+  FileArchive,
 } from 'lucide-react';
 import { useAuth } from '@/components/auth/auth-provider';
 
@@ -72,6 +73,9 @@ const adminNavItems = [
   { title: 'QL Quỹ & Học bổng', url: '/admin/fund', icon: BookOpen },
   { title: 'QL Hương ước', url: '/admin/charter', icon: ScrollText },
   { title: 'QL Cầu đương', url: '/admin/cau-duong', icon: RotateCcw },
+  ...(process.env.NEXT_PUBLIC_DESKTOP_MODE === 'true'
+    ? [{ title: 'Xuất / Nhập dữ liệu', url: '/admin/import-export', icon: FileArchive }]
+    : []),
 ];
 
 export function AppSidebar() {

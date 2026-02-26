@@ -822,13 +822,13 @@ frontend/
 
 ---
 
-**Status:** ✅ Sprints 1-8 Complete (v1.7.0) | 🔄 Sprint 9 Planning (v2.0.0)
+**Status:** ✅ Sprints 1-8 Complete (v1.7.0) | 🔄 Sprint 9 Phase 3 Complete (v2.0.0 pending)
 
-*Updated: 2026-02-26 — Sprint 8 complete: Local Development Mode (Supabase CLI + Docker) + Security Hardening (RLS, middleware, privacy defaults). Sprint 9 in planning: Standalone Desktop App.*
+*Updated: 2026-02-26 — Sprint 8 complete: Local Development Mode (Supabase CLI + Docker) + Security Hardening (RLS, middleware, privacy defaults). Sprint 9 Phase 1-3 complete: Electron shell, SQLite shim, app icons, GitHub Actions, auto-update, ZIP export/import, first-run wizard.*
 
 ---
 
-## 🏃 Sprint 9: Standalone Desktop App 🔄
+## 🏃 Sprint 9: Standalone Desktop App 🔄 (Phase 3 Complete)
 
 **Dates:** TBD (22–34 days estimated)
 **Goal:** Bản cài đặt "double-click" cho thành viên phi kỹ thuật — không cần Node.js, Docker, Supabase, hay terminal
@@ -873,9 +873,9 @@ Data layer (5 files, 79 functions), hooks (7), pages/components (~40): **KHÔNG 
 
 | # | Condition | Resolution | Status |
 |---|-----------|------------|--------|
-| A | sql.js persistence (in-memory, manual flush) | Singleton `getDatabase()` + `flushToDisk()` after every write + debounced flush + `.bak` before migration | ⏳ Phase 1 |
-| B | Export format base64 won't scale (100MB+) | Switch to **ZIP archive**: `manifest.json` + `media/` folder (archiver + yauzl, pure JS) | ⏳ Phase 3 |
-| C | sql.js WASM loading in Next.js standalone | Verify Phase 1 (task 1.7) + fallback: sqljs-dist (inline WASM) | ⏳ Phase 1 |
+| A | sql.js persistence (in-memory, manual flush) | Singleton `getDatabase()` + `flushToDisk()` after every write + debounced flush + `.bak` before migration | ✅ Done (Phase 2) |
+| B | Export format base64 won't scale (100MB+) | Switch to **ZIP archive**: `manifest.json` + `media/` folder (adm-zip, pure JS) | ✅ Done (Phase 3) |
+| C | sql.js WASM loading in Next.js standalone | Verify Phase 1 (task 1.7) + fallback: sqljs-dist (inline WASM) | ✅ Done (Phase 1) |
 
 ### ADRs Required
 
@@ -892,40 +892,40 @@ Data layer (5 files, 79 functions), hooks (7), pages/components (~40): **KHÔNG 
 
 | # | Task | File | Status |
 |---|------|------|--------|
-| 1.1 | Electron + sql.js + electron-builder deps | `desktop/package.json` | ⏳ |
-| 1.2 | BrowserWindow, app lifecycle, migration runner | `desktop/electron/main.ts` | ⏳ |
-| 1.3 | Spawn Next.js standalone on random port | `desktop/electron/server.ts` | ⏳ |
-| 1.4 | Minimal context bridge | `desktop/electron/preload.ts` | ⏳ |
-| 1.5 | `output: 'standalone'` conditional | `frontend/next.config.ts` | ⏳ |
-| 1.6 | 3-line desktop bypass | `frontend/src/middleware.ts` | ⏳ |
-| **1.7** | **Verify sql.js WASM loads in standalone** (CTO condition C) | `public/` or `outputFileTracingIncludes` | ⏳ |
-| Gate | Electron launches → shows web app shell | | ⏳ |
+| 1.1 | Electron + sql.js + electron-builder deps | `desktop/package.json` | ✅ |
+| 1.2 | BrowserWindow, app lifecycle, migration runner | `desktop/electron/main.ts` | ✅ |
+| 1.3 | Spawn Next.js standalone on random port | `desktop/electron/server.ts` | ✅ |
+| 1.4 | Minimal context bridge | `desktop/electron/preload.ts` | ✅ |
+| 1.5 | `output: 'standalone'` conditional | `frontend/next.config.ts` | ✅ |
+| 1.6 | 3-line desktop bypass | `frontend/src/middleware.ts` | ✅ |
+| **1.7** | **Verify sql.js WASM loads in standalone** (CTO condition C) | `public/` or `outputFileTracingIncludes` | ✅ |
+| Gate | Electron launches → shows web app shell | | ✅ |
 
 #### Phase 2: SQLite Shim — Core (12–18 ngày)
 
 | # | Task | File | Lines | Status |
 |---|------|------|-------|--------|
-| 2.1 | Mock 8 auth methods | `sqlite-auth-shim.ts` | ~80 | ⏳ |
-| 2.2 | Storage → API routes serializer | `sqlite-storage-shim.ts` | ~80 | ⏳ |
-| 2.3 | Client query builder → JSON → fetch | `sqlite-supabase-shim.ts` | ~120 | ⏳ |
-| 2.4 | SQL executor: query-builder + type-coerce + rpc-handlers (ADR-002) | `api/desktop-db/` (4 files) | ~500 | ⏳ |
-| **2.4a** | **Singleton DB + `flushToDisk()` after every write** (CTO condition A) | `api/desktop-db/query-builder.ts` | ~50 | ⏳ |
-| 2.5 | Local file server + path traversal guard | `api/media/[...path]/route.ts` | ~50 | ⏳ |
-| 2.6 | Return shim in desktop mode | `frontend/src/lib/supabase.ts` | ~12 | ⏳ |
-| 2.7 | SQLite schema (13 tables, PG→SQLite types) | `sqlite-migrations/001_initial.sql` | ~200 | ⏳ |
-| 2.8 | Migration runner + `_migrations` table | `desktop/migrations/` | ~50 | ⏳ |
+| 2.1 | Mock 8 auth methods | `sqlite-auth-shim.ts` | ~80 | ✅ |
+| 2.2 | Storage → API routes serializer | `sqlite-storage-shim.ts` | ~80 | ✅ |
+| 2.3 | Client query builder → JSON → fetch | `sqlite-supabase-shim.ts` | ~120 | ✅ |
+| 2.4 | SQL executor: query-builder + type-coerce + rpc-handlers (ADR-002) | `api/desktop-db/` (4 files) | ~500 | ✅ |
+| **2.4a** | **Singleton DB + `flushToDisk()` after every write** (CTO condition A) | `api/desktop-db/query-builder.ts` | ~50 | ✅ |
+| 2.5 | Local file server + path traversal guard | `api/media/[...path]/route.ts` | ~50 | ✅ |
+| 2.6 | Return shim in desktop mode | `frontend/src/lib/supabase.ts` | ~12 | ✅ |
+| 2.7 | SQLite schema (13 tables, PG→SQLite types) | `sqlite-migrations/001_initial.sql` | ~200 | ✅ |
+| 2.8 | Migration runner + `_migrations` table | `desktop/migrations/` | ~50 | ✅ |
 | 2.9 | Integration tests: all 79 functions vs SQLite | `__tests__/shim-integration.test.ts` | ~300 | ⏳ |
-| Gate | All 79 functions pass, 13 routes working, CRUD + tree + cầu đương | | | ⏳ |
+| Gate | All 79 functions pass, 13 routes working, CRUD + tree + cầu đương | | | 🔄 |
 
 #### Phase 3: Build & Distribution (5–8 ngày)
 
 | # | Task | File | Status |
 |---|------|------|--------|
-| 3.1 | macOS .dmg, Windows .exe (NSIS), Linux .AppImage | `electron-builder.yml` | ⏳ |
-| 3.2 | App icons (3 formats) | `desktop/build/icon.*` | ⏳ |
-| 3.3 | First-run wizard (tên dòng họ, admin, import) | `(main)/setup/page.tsx` | ⏳ |
-| **3.4** | **ZIP export format** (CTO condition B) | Export/Import engine | ⏳ |
-| 3.5 | Code signing: macOS Apple Developer ($99/yr) | electron-builder.yml | ⏳ |
+| 3.1 | macOS .dmg, Windows .exe (NSIS), Linux .AppImage | `electron-builder.yml` | ✅ |
+| 3.2 | App icons (3 formats) | `desktop/build/icon.*` | ✅ |
+| 3.3 | First-run wizard (tên dòng họ, admin, import) | `(main)/setup/page.tsx` | ✅ |
+| **3.4** | **ZIP export format** (CTO condition B) | Export/Import engine | ✅ |
+| 3.5 | Code signing: macOS Apple Developer ($99/yr) | electron-builder.yml | ⏸ Deferred |
 | 3.6 | Test installers on clean machine: macOS + Windows + Linux | | ⏳ |
 | Gate | Install on clean machine → first-run wizard → full app working | | ⏳ |
 
@@ -933,11 +933,11 @@ Data layer (5 files, 79 functions), hooks (7), pages/components (~40): **KHÔNG 
 
 | # | Task | Status |
 |---|------|--------|
-| 4.1 | Auto-update (electron-updater + GitHub Releases) | ⏳ |
+| 4.1 | Auto-update (electron-updater + GitHub Releases) | ✅ |
 | 4.2 | Error handling, graceful shutdown, crash recovery | ⏳ |
-| 4.3 | Update SDLC docs (BRD, TDD, Sprint Plan, Roadmap) | ⏳ |
+| 4.3 | Update SDLC docs (BRD, TDD, Sprint Plan, Roadmap) | 🔄 |
 | 4.4 | User guide tiếng Việt | ⏳ |
-| 4.5 | GitHub Release với binaries (3 platforms) | ⏳ |
+| 4.5 | GitHub Release với binaries (3 platforms) | 🔄 Workflow ready, push tag to trigger |
 
 ### Files Changed
 
