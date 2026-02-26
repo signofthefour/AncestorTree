@@ -1,6 +1,6 @@
 # AncestorTree
 
-> **Gia Phả Điện Tử - Họ Đặng làng Kỷ Các, Thạch Lâm, Hà Tĩnh**
+> **Gia Phả Điện Tử - Họ Nguyễn làng Đò Mười, Nghĩa Sơn, Thạch Lâm, Hà Tĩnh**
 
 Phần mềm quản lý gia phả điện tử giúp gìn giữ và truyền thừa thông tin dòng họ qua các thế hệ.
 
@@ -82,7 +82,7 @@ git clone https://github.com/Minh-Tam-Solution/AncestorTree.git
 cd AncestorTree/frontend
 pnpm install
 cp .env.local.example .env.local
-# Fill in NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY
+# Fill in NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, and NEXT_PUBLIC_APP_URL=https://<your-vercel-domain>
 # Then run migrations in Supabase SQL Editor (supabase/migrations/ in order)
 pnpm dev
 ```

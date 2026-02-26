@@ -1,6 +1,6 @@
 -- ═══════════════════════════════════════════════════════════════════════════
 -- Gia Phả Điện Tử - Database Setup
--- Họ Đặng làng Kỷ Các
+-- Họ Nguyễn làng Đò Mười, Nghĩa Sơn
 -- ═══════════════════════════════════════════════════════════════════════════
 
 -- Enable UUID extension
@@ -329,7 +329,7 @@ CREATE TRIGGER on_auth_user_created
 -- Uncomment to add sample data
 /*
 INSERT INTO people (handle, display_name, surname, first_name, gender, generation, chi, birth_year, is_living, is_patrilineal) VALUES
-('P001', 'Đặng Văn Thủy Tổ', 'Đặng', 'Thủy Tổ', 1, 1, 1, 1850, false, true),
+('P001', 'Nguyễn Văn Thủy Tổ', 'Đặng', 'Thủy Tổ', 1, 1, 1, 1850, false, true),
 ('P002', 'Nguyễn Thị A', 'Nguyễn', 'A', 2, 1, 1, 1855, false, false),
 ('P003', 'Đặng Văn B', 'Đặng', 'B', 1, 2, 1, 1880, false, true),
 ('P004', 'Đặng Văn C', 'Đặng', 'C', 1, 2, 1, 1882, false, true),
